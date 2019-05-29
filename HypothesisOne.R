@@ -43,11 +43,73 @@ wheatgenetics.phenotype.entity_id LIKE '%AYN%-TH-%' ;"
 #run the query to get plot information
 
 pheno <- dbGetQuery(wheatgenetics, pheno_query)
+str(pheno)
 
 #save original data
 getwd( ) #get working directory set if needed
-setwd("~/Dropbox/Research_Poland_Lab/AM Panel")
 
-saveRDS(pheno, "./Phenotype_Database/Pheno1718.RDS") 
+saveRDS(pheno, "./PhenoDatabase/Pheno.RDS") 
 
 dbDisconnect(wheatgenetics) #disconnect from database
+
+sessionInfo() # useful infos **reproducible research**
+rm(wheatgenetics, pheno_query, pheno)
+
+#Read in original data
+pheno_long<- readRDS("./PhenoDatabase/Pheno.RDS")
+
+glimpse(pheno_long)
+
+## Divide out all important info from the entity_id
+# remove awns and pcthead as they were taken sporadically
+
+pheno_long<- pheno_long %>% 
+  mutate(Sep = entity_id) %>% 
+  separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") %>% 
+  tidylog::filter(trait_id != "AWNS") %>% 
+  tidylog::filter(trait_id != "PCTHEAD") %>% 
+  tidylog::filter(phenotype_value >= 0) %>% 
+  tidylog::filter(phenotype_value < 7000) %>% 
+  group_by(Year, Trial, Location) %>% 
+  glimpse()
+
+#Function to add a column based on a portion of text in another column
+ff = function(x, patterns, replacements = patterns, fill = NA, ...)
+{
+  stopifnot(length(patterns) == length(replacements))
+  
+  ans = rep_len(as.character(fill), length(x))    
+  empty = seq_along(x)
+  
+  for(i in seq_along(patterns)) {
+    greps = grepl(patterns[[i]], x[empty], ...)
+    ans[empty[greps]] = replacements[[i]]  
+    empty = empty[!greps]
+  }
+  
+  return(ans)
+}
+
+#Adding an overall trial column
+pheno_long$OverallTrial<- ff(pheno_long$Trial, 
+                             c("AYN3","AYN2","AYN1","AYN4","DHAYN2",
+                               "DHAYN1","PYN","GSPYN","DHPYN"), 
+                             c("AYN","AYN","AYN","AYN","DHAYN",
+                               "DHAYN","PYN","GSPYN","DHPYN"),
+                     "NA", ignore.case = TRUE)
+  
+pheno_long$phenotype_value<- as.numeric(pheno_long$phenotype_value)
+traits<- unique(pheno_long$trait_id)
+
+for (i in traits) {
+  p<- pheno_long %>% 
+    tidylog::filter(trait_id == paste(i)) %>% 
+    ggplot(aes(x = phenotype_value, colour = Location)) +
+    geom_density() +
+    facet_wrap(Year ~ Trial, scales = "free") +
+    theme_bw() +
+    labs(title = paste(i))
+  print(p)
+}
+
+
