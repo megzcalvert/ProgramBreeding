@@ -1,0 +1,1 @@
+rm(list = objects()); ls()
