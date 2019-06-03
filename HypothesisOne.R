@@ -5,6 +5,8 @@ library(data.table)
 library(tidylog)
 library(RMySQL)
 library(janitor)
+library(broom)
+library(reshape2)
 
 getwd()
 
@@ -21,24 +23,20 @@ pheno_query <- "SELECT phenotype.entity_id,
 phenotype.trait_id,
 phenotype.phenotype_value,
 phenotype.phenotype_date,
+phenotype.phenotype_person,
 plot.plot_name AS 'Variety',
 plot.location,
 plot.range,
 plot.column,
 plot.rep
-FROM wheatgenetics.phenotype LEFT JOIN wheatgenetics.plot ON plot.plot_id = phenotype.entity_id 
-WHERE wheatgenetics.phenotype.entity_id LIKE '%PYN-MP-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%PYN-RN-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%PYN-RP-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%PYN-SA-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%PYN-TH-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%PYN-RL-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-RN-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-RL-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-RP-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-SA-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-MP-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%AYN%-TH-%' ;"
+FROM wheatgenetics.phenotype LEFT JOIN 
+wheatgenetics.plot ON plot.plot_id = phenotype.entity_id 
+WHERE wheatgenetics.phenotype.entity_id LIKE '%YN-MP-%' OR
+wheatgenetics.phenotype.entity_id LIKE '%YN%-RN-%' OR 
+wheatgenetics.phenotype.entity_id LIKE '%YN%-RP-%' OR
+wheatgenetics.phenotype.entity_id LIKE '%YN%-SA-%' OR
+wheatgenetics.phenotype.entity_id LIKE '%YN%-TH-%' OR
+wheatgenetics.phenotype.entity_id LIKE '%YN%-RL-%' ;"
 
 #run the query to get plot information
 
@@ -69,9 +67,12 @@ pheno_long<- pheno_long %>%
   tidylog::filter(trait_id != "AWNS") %>% 
   tidylog::filter(trait_id != "PCTHEAD") %>% 
   tidylog::filter(phenotype_value >= 0) %>% 
-  tidylog::filter(phenotype_value < 7000) %>% 
-  group_by(Year, Trial, Location) %>% 
+  tidylog::filter(phenotype_value < 6500) %>% 
+  tidylog::select(-location,-rep,-Plot) %>% 
+  mutate(ID = row_number()) %>% 
   glimpse()
+
+unique(pheno_long$Trial)
 
 #Function to add a column based on a portion of text in another column
 ff = function(x, patterns, replacements = patterns, fill = NA, ...)
@@ -92,13 +93,18 @@ ff = function(x, patterns, replacements = patterns, fill = NA, ...)
 
 #Adding an overall trial column
 pheno_long$OverallTrial<- ff(pheno_long$Trial, 
-                             c("AYN3","AYN2","AYN1","AYN4","DHAYN2",
-                               "DHAYN1","PYN","GSPYN","DHPYN"), 
-                             c("AYN","AYN","AYN","AYN","DHAYN",
-                               "DHAYN","PYN","GSPYN","DHPYN"),
-                     "NA", ignore.case = TRUE)
-  
+                             c("AYN1","AYN2","AYN3","AYN4","DHAYN1","DHAYN2",
+                               "PYN","PYN1","PYN2","PYNA","PYNB",
+                               "GSPYN","DHPYN","DHPYN1","DHPYN2"), 
+                             c("AYN","AYN","AYN","AYN","DHAYN","DHAYN",
+                               "PYN","PYN","PYN","PYN","PYN",
+                               "GSPYN","DHPYN","DHPYN","DHPYN"),
+                             "NA", ignore.case = TRUE)
+
 pheno_long$phenotype_value<- as.numeric(pheno_long$phenotype_value)
+pheno_long$Location<- as.factor(pheno_long$Location)
+pheno_long$Trial<- as.factor(pheno_long$Trial)
+pheno_long$Year<- as.factor(pheno_long$Year)
 traits<- unique(pheno_long$trait_id)
 
 for (i in traits) {
@@ -113,3 +119,49 @@ for (i in traits) {
 }
 
 
+write.table(pheno_long, "./PhenoDatabase/PhenoLong.txt", quote = F, sep = "\t",
+            col.names = T, row.names = F)
+
+# separating into traits
+unique(pheno_long$trait_id)
+phenoGryld<- pheno_long %>%    
+  tidylog::filter(trait_id == "GRYLD")
+phenoPtht<- pheno_long %>%    
+  tidylog::filter(trait_id == "PTHT")
+phenoMoist<- pheno_long %>%    
+  tidylog::filter(trait_id == "MOIST")
+phenoTestwt<- pheno_long %>%    
+  tidylog::filter(trait_id == "TESTWT")
+
+gryld<- phenoGryld %>%
+  group_by(Year) %>%
+  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
+
+ptht<- phenoPtht %>%
+  group_by(Year) %>%
+  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
+
+moist<- phenoMoist %>%
+  group_by(Year) %>%
+  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
+
+testwt<- phenoTestwt %>%
+  group_by(Year) %>%
+  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
+
+pheno_longRep<- pheno_long %>% 
+  tidylog::select(-trait_id,-phenotype_value,-phenotype_date,
+                  -phenotype_person, -ID,-range,-column,-OverallTrial) %>% 
+  group_by(Year, Location, Trial, Treated, Variety) %>% 
+  distinct() %>% 
+  mutate(rep = row_number()) %>% 
+  inner_join(pheno_long, by = c("entity_id","Variety","Year","Trial",
+                                "Location","Treated")) %>%
+  select(ID,entity_id,Variety,Year,Trial,
+         Location,Treated,rep,range,column,
+         OverallTrial,trait_id,phenotype_value,
+         phenotype_date,phenotype_person) %>% 
+  glimpse 
+
+write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt", quote = F, sep = "\t",
+            col.names = T, row.names = F)
