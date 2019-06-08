@@ -9,6 +9,7 @@ library(broom)
 library(reshape2)
 
 getwd()
+set.seed(1964)
 
 wheatgenetics = dbConnect(MySQL( ),
                           user=rstudioapi::askForPassword("Database user"),
