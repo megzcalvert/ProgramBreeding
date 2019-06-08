@@ -1,0 +1,156 @@
+rm(list = objects()); ls()
+
+library(tidyverse)
+library(data.table)
+library(tidylog)
+library(janitor)
+library(readxl)
+library(psych)
+library(broom)
+
+## End of season phenotypes
+set.seed(1973)
+
+pheno<- fread("./PhenoDatabase/PhenoLong.txt")
+
+## Vegetation indices
+
+fileNames<- list.files(path = "./PhenoDatabase/2016_2017",
+                       full.names = T)
+traitNames<- basename(fileNames) %>%
+  str_remove_all(c("traits_2016-2017_|_no_fills|.xlsx"))
+
+read_excel_sheets<- function(fileNames, traitNames, ...) {
+  traitNames<- fileNames %>% 
+    excel_sheets() %>% 
+    set_names() %>% 
+    map_df(~ read_excel(path = fileNames, sheet = .x), .id = "trait_id") 
+}
+
+data<- lapply(fileNames, read_excel_sheets)
+names(data)<- traitNames
+
+data<- plyr::ldply(data, data.frame, .id = "Field") %>% 
+  gather(key = "phenotype_date", value = "phenotype_value",X42880:X42894) %>%
+  rename(entity_id = Plot_ID) %>% 
+  drop_na(phenotype_value) %>% 
+  tidylog::filter(entity_id != "Fill") %>% 
+  tidylog::filter( str_detect(entity_id, "AYN|PYN")) %>% 
+  glimpse()
+
+# Because excel dates are stupid
+data$phenotype_date<- as.numeric(sub('.', '', data$phenotype_date))
+data$phenotype_date<- as.Date(data$phenotype_date,origin = "1899-12-30")
+
+data<- data %>% 
+  select(-Field) %>% 
+  mutate(Sep = entity_id) %>% 
+  separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") 
+
+# Checking data is there and makes sense
+
+data %>% 
+  ggplot(aes(x = factor(phenotype_date), y = phenotype_value, colour = Trial)) +
+  geom_boxplot() +
+  facet_wrap(trait_id ~ Location, scales = "free", ncol = 5) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12)) + 
+  scale_color_manual(values = c('#e41a1c','#377eb8','#4daf4a',
+                                '#984ea3','#ff7f00','#ffff33',
+                                '#a65628','#f781bf','#999999'))
+
+data<- data %>% 
+  unite("trait_id", trait_id,phenotype_date, sep = "_") %>% 
+  spread(key = trait_id, value = phenotype_value) 
+
+pheno17<- pheno %>% 
+  filter(Year == "17" & trait_id == "GRYLD") %>% 
+  select(-ID,-phenotype_date,-phenotype_person) %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  drop_na(GRYLD) 
+
+plots_missingVI<- pheno17 %>% 
+  anti_join(data, by = "entity_id")
+
+pheno17W<- data %>% 
+  select(-Year,-Trial,-Location,-Treated,-Plot) %>% 
+  left_join(x = pheno17, by = "entity_id") 
+
+### Correlation 
+pheno17Matrix<- pheno17W %>% 
+  select(10:75)
+
+corMat17<- corr.test(as.matrix(pheno17Matrix), method = "pearson",
+                     adjust = "holm")
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+  )
+}
+
+flatCor17<- flattenCorrMatrix(corMat17$r,corMat17$p)
+
+flatCor17<- flatCor17 %>% 
+  drop_na() %>% 
+  tidylog::filter(row == "GRYLD") %>% 
+  separate(column, c("trait_id","Date"), sep = "_")
+
+flatCor17$Date <- as.Date(flatCor17$Date)
+
+flatCor17 %>% 
+  ggplot(aes(x = Date, y = cor)) +
+  geom_point() +
+  facet_wrap(~trait_id, scales = "free") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = "black")) +
+  coord_cartesian(ylim = c(-1,1))
+
+
+colnames(pheno17W)
+
+#### Long format
+
+pheno17L<- pheno17W %>% 
+  gather(key = "trait_id",value = "phenotypic_value",11:75) %>% 
+  drop_na(phenotypic_value)
+colnames(pheno17L)
+
+nested17<- pheno17L %>% 
+  filter(Location != "RP" & Trial!= "GSPYN" & 
+           trait_id != "GNDVI_2017-05-24") %>% 
+  tidylog::select(-entity_id, -Variety, -range, -column, -Year, -Treated,
+                  -OverallTrial) %>% 
+  group_by(Location, Trial, trait_id) %>% 
+  nest() %>% 
+  mutate(correlation = map(data, ~ cor.test(.x$GRYLD,.x$phenotypic_value)),
+         tidyCor = map(correlation,glance)) %>% 
+  unnest(tidyCor) %>% 
+  tidylog::select(-data,-correlation) %>% 
+  separate(trait_id,c("trait_id","Date"), sep = "_")
+
+nested17$Date <- as.Date(nested17$Date)
+
+nested17 %>% 
+  ggplot(aes(x = Date, y = estimate, colour = Trial)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  facet_wrap(trait_id ~ Location, scales = "free", ncol = 5) +
+  theme_bw() +
+  theme(axis.text = element_text(colour = "black")) +
+  coord_cartesian(ylim = c(-1,1))
+
+
+
+
+
+  

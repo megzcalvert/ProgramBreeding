@@ -25,7 +25,7 @@ write.table(genoFile, "./GenoDatabase/BreedingProgramLines.txt", quote = F,
 #############################################################################
 
 snpChip <- read_delim(
-  "./GenoDatabase/BreedingProgramSelected_imputed.hmp.txt", 
+  "./GenoDatabase/BreedingProgramSelected_Imputed.hmp.txt", 
   "\t", escape_double = FALSE, trim_ws = TRUE)
 snpChip<- snpChip %>% 
   clean_names()
@@ -56,7 +56,7 @@ snpChip[snpChip == "G"] = NA
 snpChip[snpChip == "-"] = NA
 snpChip[snpChip == "."] = NA
 
-snpChip<- snpChip[ ,c(1,4,5,13:311)]
+snpChip<- snpChip[ ,c(1,4,5,13:664)]
 
 write.table(snpChip, file="./GenoDatabase/SelectedImputedBeagleNumeric.txt",
             col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
@@ -76,8 +76,16 @@ sumPCA<- as.data.frame(summary(pcaAM))
 Scores<- as.data.frame(pcaMethods::scores(pcaAM)) 
 Scores<- setDT(Scores, keep.rownames = TRUE)
 
+Scores$Year<- str_sub(Scores$rn,3,4)
+Scores$dh<- str_detect(Scores$rn,"dh")
+
 Scores %>% 
-  ggplot(aes(x = PC1, y = PC3)) +
-  geom_point()
+  ggplot(aes(x = PC1, y = PC2, colour = Year, shape = dh)) +
+  geom_point() +
+  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a',
+                                '#33a02c','#fb9a99','#e31a1c',
+                                '#fdbf6f','#ff7f00','#cab2d6', 
+                                '#cab2d6', '#cab2d6')) +
+  theme_bw()
 
 
