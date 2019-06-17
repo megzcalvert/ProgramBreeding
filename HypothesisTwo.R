@@ -80,12 +80,16 @@ Scores$Year<- str_sub(Scores$rn,3,4)
 Scores$dh<- str_detect(Scores$rn,"dh")
 
 Scores %>% 
-  ggplot(aes(x = PC1, y = PC2, colour = Year, shape = dh)) +
-  geom_point() +
-  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a',
-                                '#33a02c','#fb9a99','#e31a1c',
-                                '#fdbf6f','#ff7f00','#cab2d6', 
-                                '#cab2d6', '#cab2d6')) +
-  theme_bw()
+  ggplot(aes(x = PC2, y = PC3, colour = Year, shape = dh)) +
+  geom_point(alpha = 0.65) +
+  scale_color_manual(values = c('#1b9e77','#d95f02','#7570b3',
+                                '#e7298a','#66a61e','#e6ab02',
+                                '#a6761d','#666666','#252525', 
+                                '#252525', '#252525')) +
+  theme_bw() +
+  theme(axis.text = element_text(colour = "black")) +
+  labs(title = "PCA of Breeding Program Markers",
+       x = expression(paste("PC2 ",R^2, " = 3.99%")),
+       y =  expression(paste("PC3 ",R^2, " = 3.48%")))
 
 

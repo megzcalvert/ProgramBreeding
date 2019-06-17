@@ -32,11 +32,10 @@ plot.column,
 plot.rep
 FROM wheatgenetics.phenotype LEFT JOIN 
 wheatgenetics.plot ON plot.plot_id = phenotype.entity_id 
-WHERE wheatgenetics.phenotype.entity_id LIKE '%YN-MP-%' OR
+WHERE wheatgenetics.phenotype.entity_id LIKE '%YN%-MP-%' OR
 wheatgenetics.phenotype.entity_id LIKE '%YN%-RN-%' OR 
 wheatgenetics.phenotype.entity_id LIKE '%YN%-RP-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%YN%-SA-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%YN%-TH-%' OR
+wheatgenetics.phenotype.entity_id LIKE '%YN%-SA-%'OR
 wheatgenetics.phenotype.entity_id LIKE '%YN%-RL-%' ;"
 
 #run the query to get plot information
@@ -57,6 +56,9 @@ rm(wheatgenetics, pheno_query, pheno)
 #Read in original data
 pheno_long<- readRDS("./PhenoDatabase/Pheno.RDS")
 
+pheno_long$Variety<- str_replace(pheno_long$Variety, "~","-")
+pheno_long$Variety<- str_replace(pheno_long$Variety, "-K-","K-")
+pheno_long$Variety<- str_replace(pheno_long$Variety, "-M-","M-")
 glimpse(pheno_long)
 
 ## Divide out all important info from the entity_id
@@ -113,9 +115,13 @@ for (i in traits) {
     tidylog::filter(trait_id == paste(i)) %>% 
     ggplot(aes(x = phenotype_value, colour = Location)) +
     geom_density() +
-    facet_wrap(Year ~ Trial, scales = "free") +
+    facet_wrap(Year ~ Trial, scales = "fixed") +
     theme_bw() +
+    theme(axis.text = element_text(colour = "black")) +
     labs(title = paste(i))
+  ggsave(paste0("./Figures/Summary_",i,".png"), plot = p, width = 16, 
+         height = 16,
+         units = "cm")
   print(p)
 }
 
@@ -164,5 +170,30 @@ pheno_longRep<- pheno_long %>%
          phenotype_date,phenotype_person) %>% 
   glimpse 
 
-write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt", quote = F, sep = "\t",
-            col.names = T, row.names = F)
+write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt", quote = F, 
+            sep = "\t",col.names = T, row.names = F)
+
+glimpse(pheno_long)
+
+TrialSummary<- pheno_long %>% 
+  group_by(Year,Location,Trial) %>% 
+  summarise(n = n()) %>% 
+  glimpse()
+
+VarietySummary<- pheno_long %>% 
+  group_by(Year,Location,Trial,Variety) %>% 
+  summarise(n = n())
+
+VarSummary<- pheno_long %>% 
+  group_by(Variety, Year, Location, Trial) %>% 
+  summarise(n = n())
+write.table(VarSummary, file = "./PhenoDatabase/VarietySummary.txt", quote = F,
+            sep = "\t", row.names = F, col.names = T)
+
+
+
+
+
+
+
+

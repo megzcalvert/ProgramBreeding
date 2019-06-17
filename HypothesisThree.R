@@ -11,10 +11,10 @@ library(broom)
 ## End of season phenotypes
 set.seed(1973)
 
-pheno<- fread("./PhenoDatabase/PhenoLong.txt")
+pheno<- fread("./PhenoDatabase/PhenoLongRep.txt")
 
 ## Vegetation indices
-
+# 2016-2017 season
 fileNames<- list.files(path = "./PhenoDatabase/2016_2017",
                        full.names = T)
 traitNames<- basename(fileNames) %>%
@@ -27,10 +27,10 @@ read_excel_sheets<- function(fileNames, traitNames, ...) {
     map_df(~ read_excel(path = fileNames, sheet = .x), .id = "trait_id") 
 }
 
-data<- lapply(fileNames, read_excel_sheets)
-names(data)<- traitNames
+data17<- lapply(fileNames, read_excel_sheets)
+names(data17)<- traitNames
 
-data<- plyr::ldply(data, data.frame, .id = "Field") %>% 
+data17<- plyr::ldply(data17, data.frame, .id = "Field") %>% 
   gather(key = "phenotype_date", value = "phenotype_value",X42880:X42894) %>%
   rename(entity_id = Plot_ID) %>% 
   drop_na(phenotype_value) %>% 
@@ -39,17 +39,17 @@ data<- plyr::ldply(data, data.frame, .id = "Field") %>%
   glimpse()
 
 # Because excel dates are stupid
-data$phenotype_date<- as.numeric(sub('.', '', data$phenotype_date))
-data$phenotype_date<- as.Date(data$phenotype_date,origin = "1899-12-30")
+data17$phenotype_date<- as.numeric(sub('.', '', data17$phenotype_date))
+data17$phenotype_date<- as.Date(data17$phenotype_date,origin = "1899-12-30")
 
-data<- data %>% 
+data17<- data17 %>% 
   select(-Field) %>% 
   mutate(Sep = entity_id) %>% 
   separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") 
 
 # Checking data is there and makes sense
 
-data %>% 
+data17 %>% 
   ggplot(aes(x = factor(phenotype_date), y = phenotype_value, colour = Trial)) +
   geom_boxplot() +
   facet_wrap(trait_id ~ Location, scales = "free", ncol = 5) +
@@ -59,10 +59,57 @@ data %>%
                                 '#984ea3','#ff7f00','#ffff33',
                                 '#a65628','#f781bf','#999999'))
 
-data<- data %>% 
+data17<- data17 %>% 
   unite("trait_id", trait_id,phenotype_date, sep = "_") %>% 
   spread(key = trait_id, value = phenotype_value) 
 
+# 2017-2018 Season
+data18<- tibble()
+htpPheno<-c("GNDVI","NDRE","NDVI","Nir","RE","CanopyHeight")
+
+load.file<- function (filename) {
+  d<- fread(file = filename,header = TRUE,check.names = F,data.table = F)
+  d
+}
+
+for(i in htpPheno) {
+  fileNames<- list.files(path = "./PhenoDatabase/2017_2018",
+                         full.names = T,
+                         pattern = paste0(i,".csv"))
+  
+  traitNames<- basename(fileNames) %>%
+    str_remove_all(c(".csv"))
+  
+  data<- lapply(fileNames,load.file)
+  names(data)<- traitNames 
+  
+  data<- plyr::ldply(data, data.frame, .id = "Phenotype")
+  print(colnames(data))
+  data18<- bind_rows(data18,data)
+  rm(data)
+}
+
+data18L<- data18 %>% 
+  separate(Phenotype,c("Date","Loc1","Trait"), sep = "_") %>% 
+  unite("Trait", Trait, Date) %>% 
+  select(-CanopyHeight_top3,-SoilHeight,-X96p,-X97p,-X98p,-X99p,-X100p) %>% 
+  gather(key = "VI", value = "phenotypic_value",GNDVI:CanopyHeight_top5) %>%
+  distinct() %>% 
+  select(-VI) %>% 
+  drop_na(phenotypic_value) %>% 
+  glimpse()
+
+data18L$Loc1<- str_remove(data18L$Loc1,"HE")
+data18L$Loc1<- str_remove(data18L$Loc1,"HW")
+
+data18w<- data18L %>% 
+  separate(Plot_ID, c("Plot","range","column"), sep = ":") %>% 
+  glimpse() %>% 
+  filter(str_detect(Plot,"^18-")) %>% 
+  filter(!str_detect(Plot,"SRPN")) %>% 
+  spread(key = Trait, value = phenotypic_value)
+
+## Joining to pheno column
 pheno17<- pheno %>% 
   filter(Year == "17" & trait_id == "GRYLD") %>% 
   select(-ID,-phenotype_date,-phenotype_person) %>% 
@@ -70,15 +117,15 @@ pheno17<- pheno %>%
   drop_na(GRYLD) 
 
 plots_missingVI<- pheno17 %>% 
-  anti_join(data, by = "entity_id")
+  anti_join(data17, by = "entity_id")
 
-pheno17W<- data %>% 
+pheno17W<- data17 %>% 
   select(-Year,-Trial,-Location,-Treated,-Plot) %>% 
   left_join(x = pheno17, by = "entity_id") 
 
 ### Correlation 
 pheno17Matrix<- pheno17W %>% 
-  select(10:75)
+  select(11:75)
 
 corMat17<- corr.test(as.matrix(pheno17Matrix), method = "pearson",
                      adjust = "holm")
@@ -113,7 +160,8 @@ flatCor17 %>%
   facet_wrap(~trait_id, scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(colour = "black")) +
-  coord_cartesian(ylim = c(-1,1))
+  coord_cartesian(ylim = c(-1,1)) +
+  labs(title = "Correlation between GRYLD and VI")
 
 
 colnames(pheno17W)
@@ -121,15 +169,19 @@ colnames(pheno17W)
 #### Long format
 
 pheno17L<- pheno17W %>% 
-  gather(key = "trait_id",value = "phenotypic_value",11:75) %>% 
+  gather(key = "trait_id",value = "phenotypic_value",12:76) %>% 
   drop_na(phenotypic_value)
 colnames(pheno17L)
 
+#write_delim(pheno17L,"./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
+
 nested17<- pheno17L %>% 
-  filter(Location != "RP" & Trial!= "GSPYN" & 
-           trait_id != "GNDVI_2017-05-24") %>% 
-  tidylog::select(-entity_id, -Variety, -range, -column, -Year, -Treated,
-                  -OverallTrial) %>% 
+  filter(Location != "RP" 
+         #& #Trial!= "GSPYN" 
+         #& trait_id != "GNDVI_2017-05-24"
+  ) %>% 
+  tidylog::select(-entity_id, -Variety, -range, 
+                  -column, -Year, -Treated,-OverallTrial) %>% 
   group_by(Location, Trial, trait_id) %>% 
   nest() %>% 
   mutate(correlation = map(data, ~ cor.test(.x$GRYLD,.x$phenotypic_value)),
@@ -144,13 +196,13 @@ nested17 %>%
   ggplot(aes(x = Date, y = estimate, colour = Trial)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
-  facet_wrap(trait_id ~ Location, scales = "free", ncol = 5) +
+  facet_wrap(trait_id ~ Location, scales = "free", ncol = 3) +
   theme_bw() +
   theme(axis.text = element_text(colour = "black")) +
-  coord_cartesian(ylim = c(-1,1))
+  coord_cartesian(ylim = c(-1,1)) +
+  labs(title = "Correlation between GRYLD and VI 2017")
 
 
 
 
 
-  
