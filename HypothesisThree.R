@@ -140,9 +140,39 @@ phenoMP18<- data18L %>%
   gather(key = trait_id, value = phenotype_value, GRWT:`RE_20180606`) %>% 
   drop_na(phenotype_value)
 
+phenoRP18<- data18L %>% 
+  filter(Loc1 == "RP") %>% 
+  separate(Plot_ID,c("Plot","range","column"), sep = ":") %>% 
+  mutate(range = as.numeric(range), 
+         column = as.numeric(column)) %>% 
+  mutate(column = 58 - column) %>% 
+  arrange(column,range) %>% 
+  inner_join(pheno, by = c("Loc1" = "Location",
+                           "column" = "column",
+                           "range" = "range")) %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  spread(key = Trait, value = phenotypic_value) %>% 
+  select(-phenotype_person) %>% 
+  gather(key = trait_id, value = phenotype_value, GRWT:`RE_20180611`) %>% 
+  drop_na(phenotype_value)
 
-
-
+#This one needs to be checked
+phenoRN18<- data18L %>% 
+  filter(Loc1 == "RN") %>% 
+  separate(Plot_ID,c("Plot","range","column"), sep = ":") %>% 
+  mutate(range = as.numeric(range), 
+         column = as.numeric(column)) %>%
+  mutate(Plot = str_replace(Plot, "-U-","-T-"),
+         range = 28 - range,
+         id = row_number())  %>% 
+  inner_join(pheno, by = c("Loc1" = "Location",
+                           "column" = "column",
+                           "range" = "range")) %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  spread(key = Trait, value = phenotypic_value) %>% 
+  select(-phenotype_person) %>% 
+  gather(key = trait_id, value = phenotype_value, GRWT:`RE_20180530`) %>% 
+  drop_na(phenotype_value)
 
 
 
