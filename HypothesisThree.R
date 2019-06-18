@@ -102,12 +102,30 @@ data18L<- data18 %>%
 data18L$Loc1<- str_remove(data18L$Loc1,"HE")
 data18L$Loc1<- str_remove(data18L$Loc1,"HW")
 
-data18w<- data18L %>% 
+data18L<- data18L %>% 
   separate(Plot_ID, c("Plot","range","column"), sep = ":") %>% 
   glimpse() %>% 
-  filter(str_detect(Plot,"^18-")) %>% 
+  filter(!str_detect(Plot,"18GYP_SA")) %>% 
+  filter(!str_detect(Plot,"18BEL_RP")) %>% 
+  filter(!str_detect(Plot,"18MP_")) %>% 
+  filter(!str_detect(Plot,"Fill")) %>% 
   filter(!str_detect(Plot,"SRPN")) %>% 
-  spread(key = Trait, value = phenotypic_value)
+  filter(!str_detect(Plot,"CKE")) %>% 
+  filter(!str_detect(Plot,"ENEV")) %>% 
+  filter(!str_detect(Plot,"KIN"))
+
+data18gg<- data18L %>% 
+  separate(Trait, c("Trait","Date"), sep = "_") %>% 
+  dplyr::mutate(Sep = Plot) %>% 
+  separate(Sep, c("Year","Trial","Location","Treated","Plot"))
+
+data18gg$Date<- as.Date(data18gg$Date, format = "%Y%m%d")
+data18gg$phenotypic_value<- as.numeric(data18gg$phenotypic_value)
+
+data18gg %>% 
+  ggplot(aes(x = factor(Date), y = phenotypic_value, colour = Trial)) +
+  geom_boxplot() +
+  facet_wrap(Loc1~Trait, scales = "free")
 
 ## Joining to pheno column
 pheno17<- pheno %>% 
