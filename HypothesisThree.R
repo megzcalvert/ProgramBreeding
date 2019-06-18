@@ -102,17 +102,25 @@ data18L<- data18 %>%
 data18L$Loc1<- str_remove(data18L$Loc1,"HE")
 data18L$Loc1<- str_remove(data18L$Loc1,"HW")
 
+# Different plot_id's to those in the database. Going to separate and pair by 
+# position. Needs to be done separately by location
+
+
+
+
 data18L<- data18L %>% 
   separate(Plot_ID, c("Plot","range","column"), sep = ":") %>% 
   glimpse() %>% 
-  filter(!str_detect(Plot,"18GYP_SA")) %>% 
-  filter(!str_detect(Plot,"18BEL_RP")) %>% 
-  filter(!str_detect(Plot,"18MP_")) %>% 
   filter(!str_detect(Plot,"Fill")) %>% 
   filter(!str_detect(Plot,"SRPN")) %>% 
   filter(!str_detect(Plot,"CKE")) %>% 
   filter(!str_detect(Plot,"ENEV")) %>% 
   filter(!str_detect(Plot,"KIN"))
+
+
+
+
+
 
 data18gg<- data18L %>% 
   separate(Trait, c("Trait","Date"), sep = "_") %>% 

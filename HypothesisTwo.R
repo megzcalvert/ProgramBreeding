@@ -56,7 +56,7 @@ snpChip[snpChip == "G"] = NA
 snpChip[snpChip == "-"] = NA
 snpChip[snpChip == "."] = NA
 
-snpChip<- snpChip[ ,c(1,4,5,13:664)]
+snpChip<- snpChip[ ,c(1,4,5,13:826)]
 
 write.table(snpChip, file="./GenoDatabase/SelectedImputedBeagleNumeric.txt",
             col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
@@ -65,6 +65,8 @@ snpChip = fread(file="./GenoDatabase/SelectedImputedBeagleNumeric.txt",
                 header=TRUE, check.names=F, sep = "\t")
 
 chrSum<- plyr::count(snpChip, vars = "chrom")
+snpChip<- snpChip %>% 
+  filter(chrom != "UN")
 snpMatrix<- t(snpChip[ , c(-1, -2, -3)])
 
 pcaMethods::checkData(snpMatrix)  #Check PCA assumptions
@@ -89,7 +91,7 @@ Scores %>%
   theme_bw() +
   theme(axis.text = element_text(colour = "black")) +
   labs(title = "PCA of Breeding Program Markers",
-       x = expression(paste("PC2 ",R^2, " = 3.99%")),
-       y =  expression(paste("PC3 ",R^2, " = 3.48%")))
+       x = expression(paste("PC2 ",R^2, " = 3.9%")),
+       y =  expression(paste("PC3 ",R^2, " = 2.6%")))
 
 
