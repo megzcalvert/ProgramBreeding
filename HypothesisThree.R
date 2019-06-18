@@ -105,17 +105,43 @@ data18L$Loc1<- str_remove(data18L$Loc1,"HW")
 # Different plot_id's to those in the database. Going to separate and pair by 
 # position. Needs to be done separately by location
 
+phenoSA18<- data18L %>% 
+  filter(Loc1 == "SA") %>% 
+  separate(Plot_ID,c("Plot","Range","Column"), sep = ":") %>% 
+  mutate(Range = as.numeric(Range), 
+         Column = as.numeric(Column)) %>% 
+  arrange(Range, Column) %>% 
+  mutate(CorrectColumn = 48 - Range,
+         CorrectRange = 26 - Column) %>% 
+  select(-Range,-Column) %>%
+  rename(column = CorrectColumn, range = CorrectRange) %>% 
+  inner_join(pheno, by = c("Loc1" = "Location", 
+                           "column" = "column",
+                           "range" = "range")) %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  spread(key = Trait, value = phenotypic_value) %>% 
+  select(-phenotype_person) %>% 
+  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180530`) %>% 
+  drop_na(phenotype_value)
+
+phenoMP18<- data18L %>% 
+  filter(Loc1 == "MCP") %>% 
+  separate(Plot_ID,c("Plot","column","range"), sep = ":") %>% 
+  mutate(range = as.numeric(range), 
+         column = as.numeric(column)) %>% 
+  arrange(column,range) %>% 
+  mutate(Location = "MP") %>% 
+  inner_join(pheno, by = c("Location" = "Location",
+                           "column" = "column",
+                           "range" = "range")) %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  spread(key = Trait, value = phenotypic_value) %>% 
+  select(-phenotype_person) %>% 
+  gather(key = trait_id, value = phenotype_value, GRWT:`RE_20180606`) %>% 
+  drop_na(phenotype_value)
 
 
 
-data18L<- data18L %>% 
-  separate(Plot_ID, c("Plot","range","column"), sep = ":") %>% 
-  glimpse() %>% 
-  filter(!str_detect(Plot,"Fill")) %>% 
-  filter(!str_detect(Plot,"SRPN")) %>% 
-  filter(!str_detect(Plot,"CKE")) %>% 
-  filter(!str_detect(Plot,"ENEV")) %>% 
-  filter(!str_detect(Plot,"KIN"))
 
 
 
