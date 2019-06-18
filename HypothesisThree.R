@@ -182,25 +182,26 @@ phenoRN18<- data18L %>%
   drop_na(phenotype_value) %>% 
   distinct()
 
-rm(data18,data18L)
-
 data18<- phenoMP18 %>% 
   bind_rows(phenoRN18,phenoRP18,phenoSA18) %>% 
   separate(trait_id, c("trait_id","phenotype_date"), sep = "_") %>% 
   mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d")) %>%
-  mutate(replace_na(phenotype_date, "2018-06-13")) %>% 
+  mutate(phenotype_date = replace_na(phenotype_date, "2018-06-13")) %>% 
+  distinct() %>% 
   glimpse()
-
-
 
 data18 %>% 
   ggplot(aes(x = factor(phenotype_date), 
              y = phenotype_value, 
              colour = Trial)) +
   geom_boxplot() +
-  facet_wrap(Location~trait_id, scales = "free")
+  facet_wrap(Location~trait_id, scales = "free") +
+  theme_bw()
 
-## Joining to pheno column
+rm(pheno18,data18L,phenoMP18,phenoRN18,phenoRP18,phenoSA18)
+
+###### Correlation with GRYLD #####
+## 2017
 pheno17<- pheno %>% 
   filter(Year == "17" & trait_id == "GRYLD") %>% 
   select(-ID,-phenotype_date,-phenotype_person) %>% 
@@ -214,57 +215,12 @@ pheno17W<- data17 %>%
   select(-Year,-Trial,-Location,-Treated,-Plot) %>% 
   left_join(x = pheno17, by = "entity_id") 
 
-### Correlation 
-pheno17Matrix<- pheno17W %>% 
-  select(11:75)
-
-corMat17<- corr.test(as.matrix(pheno17Matrix), method = "pearson",
-                     adjust = "holm")
-
-# ++++++++++++++++++++++++++++
-# flattenCorrMatrix
-# ++++++++++++++++++++++++++++
-# cormat : matrix of the correlation coefficients
-# pmat : matrix of the correlation p-values
-flattenCorrMatrix <- function(cormat, pmat) {
-  ut <- upper.tri(cormat)
-  data.frame(
-    row = rownames(cormat)[row(cormat)[ut]],
-    column = rownames(cormat)[col(cormat)[ut]],
-    cor  =(cormat)[ut],
-    p = pmat[ut]
-  )
-}
-
-flatCor17<- flattenCorrMatrix(corMat17$r,corMat17$p)
-
-flatCor17<- flatCor17 %>% 
-  drop_na() %>% 
-  tidylog::filter(row == "GRYLD") %>% 
-  separate(column, c("trait_id","Date"), sep = "_")
-
-flatCor17$Date <- as.Date(flatCor17$Date)
-
-flatCor17 %>% 
-  ggplot(aes(x = Date, y = cor)) +
-  geom_point() +
-  facet_wrap(~trait_id, scales = "free") +
-  theme_bw() +
-  theme(axis.text = element_text(colour = "black")) +
-  coord_cartesian(ylim = c(-1,1)) +
-  labs(title = "Correlation between GRYLD and VI")
-
-
-colnames(pheno17W)
-
-#### Long format
-
 pheno17L<- pheno17W %>% 
   gather(key = "trait_id",value = "phenotypic_value",12:76) %>% 
   drop_na(phenotypic_value)
 colnames(pheno17L)
 
-#write_delim(pheno17L,"./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
+write_delim(pheno17L,"./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
 
 nested17<- pheno17L %>% 
   filter(Location != "RP" 
@@ -293,7 +249,34 @@ nested17 %>%
   coord_cartesian(ylim = c(-1,1)) +
   labs(title = "Correlation between GRYLD and VI 2017")
 
+## 2018
 
+pheno18nested<- data18 %>% 
+  filter(trait_id != "PTHT") %>% 
+  unite("trait_id",trait_id,phenotype_date, sep = "_") %>% 
+  spread(key = trait_id, value = phenotype_value) %>% 
+  gather(key = "trait_id",value = "phenotype_value", 
+         `CanopyHeight_2017-12-01`:`GNDVI_2018-06-11`,
+         `NDRE_2017-12-01`:`RE_2018-06-11`) %>% 
+  drop_na(phenotype_value) %>% 
+  group_by(Location, Trial, trait_id) %>% 
+  nest() %>% 
+  mutate(correlation = map(data, ~ cor.test(.x$`GRYLD_2018-06-13`,
+                                            .x$phenotype_value)),
+         tidyCor = map(correlation,glance)) %>% 
+  unnest(tidyCor) %>% 
+  tidylog::select(-data,-correlation) %>% 
+  separate(trait_id,c("trait_id","Date"), sep = "_")
 
+pheno18nested$Date <- as.Date(pheno18nested$Date)
 
+pheno18nested %>% 
+  ggplot(aes(x = Date, y = estimate, colour = p.value, shape = Trial)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  facet_wrap(trait_id ~ Location, scales = "free", ncol = 4) +
+  theme_bw() +
+  theme(axis.text = element_text(colour = "black")) +
+  coord_cartesian(ylim = c(-1,1)) +
+  labs(title = "Correlation between GRYLD and VI 2018")
 
