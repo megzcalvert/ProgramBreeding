@@ -162,7 +162,7 @@ phenoRP18<- data18L %>%
   drop_na(phenotype_value) %>% 
   distinct()
 
-#This one needs to be checked
+#This one needs to be checked only similar plot ID's and they don't match
 phenoRN18<- data18L %>% 
   filter(Location == "RN") %>% 
   separate(Plot_ID,c("Plot","range","column"), sep = ":") %>% 
@@ -221,6 +221,7 @@ pheno17L<- pheno17W %>%
 colnames(pheno17L)
 
 write_delim(pheno17L,"./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
+write_delim(data18,"./PhenoDatabase/PhenoVI_18.txt", delim = "\t")
 
 nested17<- pheno17L %>% 
   filter(Location != "RP" 
@@ -240,6 +241,7 @@ nested17<- pheno17L %>%
 nested17$Date <- as.Date(nested17$Date)
 
 nested17 %>% 
+  filter(p.value > 0.05) %>% 
   ggplot(aes(x = Date, y = estimate, colour = Trial)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
@@ -271,7 +273,8 @@ pheno18nested<- data18 %>%
 pheno18nested$Date <- as.Date(pheno18nested$Date)
 
 pheno18nested %>% 
-  ggplot(aes(x = Date, y = estimate, colour = p.value, shape = Trial)) +
+  filter(p.value > 0.05) %>% 
+  ggplot(aes(x = Date, y = estimate, colour = Trial)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
   facet_wrap(trait_id ~ Location, scales = "free", ncol = 4) +
