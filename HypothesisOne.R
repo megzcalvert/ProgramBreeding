@@ -64,14 +64,31 @@ glimpse(pheno_long)
 ## Divide out all important info from the entity_id
 # remove awns and pcthead as they were taken sporadically
 
+remove_outliers <- function(x, na.rm = TRUE, ...) {
+  qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
+  H <- 2 * IQR(x, na.rm = na.rm)
+  y <- x
+  y[x < (qnt[1] - H)] <- NA
+  y[x > (qnt[2] + H)] <- NA
+  y
+}
+
 pheno_long<- pheno_long %>% 
   mutate(Sep = entity_id) %>% 
   separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") %>% 
   tidylog::filter(trait_id != "AWNS") %>% 
   tidylog::filter(trait_id != "PCTHEAD") %>% 
   tidylog::filter(phenotype_value >= 0) %>% 
-  tidylog::filter(phenotype_value < 6500) %>% 
-  tidylog::select(-location,-rep,-Plot) %>% 
+  mutate(phenotype_value = as.numeric(phenotype_value)) %>% 
+  group_by(Year,Location,Trial,trait_id) %>% 
+  nest %>% 
+  mutate(removedOutliers = map(data,
+                               ~ remove_outliers(.x$phenotype_value))) %>% 
+  unnest() %>% 
+  ungroup() %>% 
+  tidylog::filter(removedOutliers < 6500) %>% 
+  tidylog::select(-location,-rep,-Plot,-phenotype_value) %>% 
+  rename(phenotype_value = removedOutliers) %>% 
   mutate(ID = row_number()) %>% 
   glimpse()
 
@@ -104,7 +121,6 @@ pheno_long$OverallTrial<- ff(pheno_long$Trial,
                                "GSPYN","DHPYN","DHPYN","DHPYN"),
                              "NA", ignore.case = TRUE)
 
-pheno_long$phenotype_value<- as.numeric(pheno_long$phenotype_value)
 pheno_long$Location<- as.factor(pheno_long$Location)
 pheno_long$Trial<- as.factor(pheno_long$Trial)
 pheno_long$Year<- as.factor(pheno_long$Year)

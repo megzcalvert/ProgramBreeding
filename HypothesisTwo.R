@@ -7,13 +7,18 @@ library(tidylog)
 pheno<- fread("./PhenoDatabase/PhenoLong.txt")
 phenoLines<- as.data.frame(unique(pheno$Variety))
 colnames(phenoLines)<- "Variety"
+phenoLines$Variety<- as.character(tolower(phenoLines$Variety))
+
 
 genoMaster<- fread("./GenoDatabase/Master_2018_Marshall.txt")
+genoMaster<- genoMaster %>% 
+  mutate(Variety = tolower(FullSampleName)) %>% 
+  glimpse()
 
 genoFile<- genoMaster %>% 
-  inner_join(phenoLines, by = c("FullSampleName" = "Variety"))
+  inner_join(phenoLines, by = c("Variety" = "Variety"))
 
-genoLines<- as.data.frame(unique(genoFile$FullSampleName))
+genoLines<- as.data.frame(unique(genoFile$Variety))
 colnames(genoLines)<- "Variety"
 
 missinglines<- phenoLines %>% 
