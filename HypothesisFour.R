@@ -115,8 +115,9 @@ pheno18_H2 %>%
         legend.title = element_text(size = 16)) +
   labs(title = "Broad-sense Heritability", 
        subtitle = "2017/2018 season")
-  
 
+write_delim(pheno17_H2,"./PhenoDatabase/Heritabilities_2017.txt", delim = "\t")
+write_delim(pheno18_H2,"./PhenoDatabase/Heritabilities_2018.txt", delim = "\t")
 
 
 

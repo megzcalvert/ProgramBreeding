@@ -3,6 +3,7 @@ rm(list = objects()); ls()
 library(tidyverse)
 library(data.table)
 library(tidylog)
+library(janitor)
 
 pheno<- fread("./PhenoDatabase/PhenoLong.txt")
 phenoLines<- as.data.frame(unique(pheno$Variety))
@@ -83,19 +84,33 @@ sumPCA<- as.data.frame(summary(pcaAM))
 Scores<- as.data.frame(pcaMethods::scores(pcaAM)) 
 Scores<- setDT(Scores, keep.rownames = TRUE)
 
-Scores$Year<- str_sub(Scores$rn,3,4)
-Scores$dh<- str_detect(Scores$rn,"dh")
+Scores<- Scores %>% 
+  mutate(Year = str_sub(rn,3,4),
+         Year = as.numeric(Year),
+         Year = replace_na(Year,"Unknown"),
+         Year = str_replace(Year,"44","Unknown"),
+         dh = str_detect(rn,"dh"))
 
 Scores %>% 
-  ggplot(aes(x = PC2, y = PC3, colour = Year, shape = dh)) +
-  geom_point(alpha = 0.65) +
-  scale_color_manual(values = c('#1b9e77','#d95f02','#7570b3',
+  ggplot(aes(x = PC2, y = PC3, colour = factor(Year), shape = dh)) +
+  geom_point(alpha = 1) +
+  scale_color_manual(name = "Year", 
+                     values = c('#1b9e77','#d95f02','#7570b3',
                                 '#e7298a','#66a61e','#e6ab02',
-                                '#a6761d','#666666','#252525', 
-                                '#252525', '#252525')) +
+                                '#a6761d','#666666','#000000')) +
+  scale_shape_manual(name = "DoubleHaploid", 
+                     values = c(17,19)) +
   theme_bw() +
-  theme(axis.text = element_text(colour = "black")) +
+  theme(axis.title = element_text(colour = "black", size = 16),
+        axis.text = element_text(colour = "black", size = 14),
+        aspect.ratio = 1:1,
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        panel.grid.major = element_line(colour = "#b7b7b7",linetype = 2),
+        plot.title = element_text(size = 16),
+        plot.subtitle = element_text(colour = "black", size = 14)) +
   labs(title = "PCA of Breeding Program Markers",
+       subtitle = "AYN and PYN in 2016-2019",
        x = expression(paste("PC2 ",R^2, " = 3.9%")),
        y =  expression(paste("PC3 ",R^2, " = 2.6%")))
 
