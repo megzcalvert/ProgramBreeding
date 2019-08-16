@@ -50,4 +50,17 @@ nested17 %>%
   geom_point(alpha = 0.5) +
   facet_wrap(trait_id ~ Location, ncol = 4) +
   theme_bw() +
-  theme(axis.text = element_text(colour = "black"))
+  theme(axis.text = element_text(colour = "black")) +
+  labs(title = "Linear regression for GRYLD 2016-2017",
+       y = "adjusted r.squared")
+
+nested18 %>% 
+  ggplot(aes(x = Date,
+             y = adj.r.squared, 
+             colour = Trial)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(trait_id ~ Location, ncol = 4) +
+  theme_bw() +
+  theme(axis.text = element_text(colour = "black")) +
+  labs(title = "Linear regression for GRYLD 2017-2018",
+       y = "adjusted r.squared")

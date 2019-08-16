@@ -9,12 +9,48 @@ pheno<- fread("./PhenoDatabase/PhenoLong.txt")
 phenoLines<- as.data.frame(unique(pheno$Variety))
 colnames(phenoLines)<- "Variety"
 phenoLines$Variety<- as.character(tolower(phenoLines$Variety))
+phenoLines$Variety[phenoLines$Variety == "wb-4458"] <- "wb4458"
+phenoLines$Variety[phenoLines$Variety == "lcschrome"] <- "lcs chrome"
+phenoLines<- phenoLines %>% 
+  mutate(Variety = str_replace_all(Variety, "-","_"))
 
+genoMaster_2018<- fread("./GenoDatabase/BP_KeyFiles/Master_2018.txt")
+genoMaster_2019<- fread("./GenoDatabase/BP_KeyFiles/Master_2019.txt")
+genoPYN_2019<- fread("./GenoDatabase/BP_KeyFiles/PYN_2019.txt")
+genoGSPYN<- fread("./GenoDatabase/BP_KeyFiles/PYNGBS_Allan_Fritz_key_file_20190614.txt")
+genoIPSR_15<- fread("./GenoDatabase/BP_KeyFiles/IPSR2015.txt")
+genoIPSR_16<- fread("./GenoDatabase/BP_KeyFiles/IPSR2016.txt")
+genoIPSR_17<- fread("./GenoDatabase/BP_KeyFiles/IPSR_17.txt")
+genoOther<- fread("./GenoDatabase/BP_KeyFiles/ManuscriptGS.txt")
 
-genoMaster<- fread("./GenoDatabase/Master_2018_Marshall.txt")
+genoMaster<- genoMaster_2018 %>% 
+  bind_rows(genoMaster_2019,genoPYN_2019,genoGSPYN,
+            genoIPSR_15,genoIPSR_16,genoIPSR_17,genoOther) %>% 
+  select(Flowcell,Lane,Barcode,FullSampleName) %>% 
+  glimpse()
+
 genoMaster<- genoMaster %>% 
   mutate(Variety = tolower(FullSampleName)) %>% 
+  mutate(Variety = str_replace_all(Variety,"~","_")) %>% 
+  mutate(Variety = str_replace_all(Variety, "-","_")) %>% 
+  mutate(Variety = str_replace_all(Variety," ","_")) %>% 
+  mutate(Variety = str_replace_all(Variety,"'","")) %>% 
+  #mutate(Variety = str_replace_all(Variety,"+","")) %>% 
+  mutate(Variety = str_replace_all(Variety,"_m_","m_")) %>% 
+  mutate(Variety = str_replace_all(Variety,"_k_","m_")) %>% 
+  mutate(Variety = str_replace_all(Variety,"k_","m_")) %>% 
+  mutate(Variety = str_replace_all(Variety,"_cf_","cf_")) %>% 
+  #mutate(Variety = str_replace_all(Variety,"(tiger)","")) %>% 
+  mutate(Variety = str_replace(Variety,"ks02hw34_=_danby","danby")) %>% 
+  mutate(Variety = str_replace(Variety,"monument","symonument")) %>% 
+  mutate(Variety = str_replace(Variety,"bobdole","bob_dole")) %>% 
+  mutate(Variety = str_replace(Variety,"claracl","clara_cl")) %>% 
+  mutate(Variety = str_replace(Variety,"karl92","karl_92")) %>% 
+  mutate(Variety = str_replace(Variety,"flint","syflint")) %>% 
+  drop_na() %>% 
   glimpse()
+
+genoMasterLines<- as.data.frame(unique(genoMaster$Variety))
 
 genoFile<- genoMaster %>% 
   inner_join(phenoLines, by = c("Variety" = "Variety"))
@@ -27,11 +63,13 @@ missinglines<- phenoLines %>%
 
 write.table(genoFile, "./GenoDatabase/BreedingProgramLines.txt", quote = F,
             sep = "\t", row.names = F, col.names = T)
+write.table(genoMaster,"./GenoDatabase/MasterBreedingProgram.txt", quote = F,
+            sep = "\t", row.names = F, col.names = T)
 
 #############################################################################
 
 snpChip <- read_delim(
-  "./GenoDatabase/BreedingProgramSelected_Imputed.hmp.txt", 
+  "./GenoDatabase/BreedingProgramSelected_imputed.hmp.txt", 
   "\t", escape_double = FALSE, trim_ws = TRUE)
 snpChip<- snpChip %>% 
   clean_names()
@@ -62,7 +100,7 @@ snpChip[snpChip == "G"] = NA
 snpChip[snpChip == "-"] = NA
 snpChip[snpChip == "."] = NA
 
-snpChip<- snpChip[ ,c(1,4,5,13:826)]
+snpChip<- snpChip[ ,c(1,4,5,13:1343)]
 
 write.table(snpChip, file="./GenoDatabase/SelectedImputedBeagleNumeric.txt",
             col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
@@ -92,7 +130,7 @@ Scores<- Scores %>%
          dh = str_detect(rn,"dh"))
 
 Scores %>% 
-  ggplot(aes(x = PC2, y = PC3, colour = factor(Year), shape = dh)) +
+  ggplot(aes(x = PC1, y = PC2, colour = factor(Year), shape = dh)) +
   geom_point(alpha = 1) +
   scale_color_manual(name = "Year", 
                      values = c('#1b9e77','#d95f02','#7570b3',
@@ -111,7 +149,7 @@ Scores %>%
         plot.subtitle = element_text(colour = "black", size = 14)) +
   labs(title = "PCA of Breeding Program Markers",
        subtitle = "AYN and PYN in 2016-2019",
-       x = expression(paste("PC2 ",R^2, " = 3.9%")),
-       y =  expression(paste("PC3 ",R^2, " = 2.6%")))
+       x = expression(paste("PC1 ",R^2, " = 4.7%")),
+       y =  expression(paste("PC2 ",R^2, " = 3.8%")))
 
 

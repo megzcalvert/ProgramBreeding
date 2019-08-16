@@ -1,17 +1,15 @@
 rm(list = objects()); ls()
 
 library(tidyverse)
-library(data.table)
 library(tidylog)
 library(janitor)
-library(asreml)
 library(lme4)
 
 ##### Read in HTP data, Use separate files at first, unsure if the same
-pheno17<- fread("./PhenoDatabase/PhenoLong_vi17.txt")
+pheno17<- data.table::fread("./PhenoDatabase/PhenoLong_vi17.txt")
 str(pheno17)
 
-pheno18<- fread("./PhenoDatabase/PhenoVI_18.txt")
+pheno18<- data.table::fread("./PhenoDatabase/PhenoVI_18.txt")
 str(pheno18)
 
 # Use only Varities with more than one rep per season
@@ -58,13 +56,13 @@ pheno17_H2<- pheno17 %>%
                        phenotype_value ~ (1|Variety) + (1|rep) + (1|column) + 
                          (1|range),
                        data = .)),
-         VarianceComp = map(model, as.data.frame(VarCorr))) %>% 
+         VarianceComp = map(model, ~ as.data.frame(lme4::VarCorr(.x)))) %>% 
   unnest(VarianceComp) 
 
 pheno17_H2<- pheno17_H2 %>% 
   group_by(Year,Location,Trial,trait_id) %>% 
-  select(-value.var1,-value.var2,-value.sdcor) %>% 
-  spread(key = value.grp, value = value.vcov) %>% 
+  select(-var1,-var2,-sdcor) %>% 
+  spread(key = grp, value = vcov) %>% 
   mutate(H2 = Variety / (Variety + Residual/2)) %>% 
   separate(trait_id,c("trait_id","Date"), sep = "_") %>% 
   mutate(Date = as.Date(Date, format = "%Y-%m-%d")) %>% 
@@ -91,13 +89,13 @@ pheno18_H2<- pheno18 %>%
                      ~lmer(phenotype_value ~ 
                              (1|Variety) + (1|rep) + (1|column) + (1|range), 
                             data = .)),
-         VarianceComp = map(model, as.data.frame(VarCorr))) %>% 
+         VarianceComp = map(model, ~ as.data.frame(lme4::VarCorr(.x)))) %>% 
   unnest(VarianceComp) 
 
 pheno18_H2<- pheno18_H2 %>% 
   group_by(Year,Location,Trial,trait_id) %>% 
-  select(-value.var1,-value.var2,-value.sdcor) %>% 
-  spread(key = value.grp, value = value.vcov) %>% 
+  select(-var1,-var2,-sdcor) %>% 
+  spread(key = grp, value = vcov) %>% 
   mutate(H2 = Variety / (Variety + Residual/2))
 
 pheno18_H2 %>% 
