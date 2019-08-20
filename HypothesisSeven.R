@@ -67,7 +67,6 @@ pheno17<- fread("./PhenoDatabase/PhenoLong_vi17.txt")
 
 pheno18<- fread("./PhenoDatabase/PhenoVI_18.txt")
 
-
 #### Move from long to wide 
 pheno17<- pheno17 %>% 
   spread(key = trait_id, value = phenotypic_value) %>% 
@@ -213,8 +212,13 @@ for (i in traits) {
 
 warnings()
 
+write.table(dat17,"./PhenoDatabase/BLUPs_2017.txt", quote = F, sep = "\t",
+            row.names = F, col.names = T)
+write.table(dat18,"./PhenoDatabase/BLUPs_2018.txt", quote = F, sep = "\t",
+            row.names = F, col.names = T)
+
 #### PCA of phenotypes
-dat17pca<- as.matrix(t(dat17[,-1]))
+dat17pca<- as.matrix(dat17[,-1])
 
 pcaMethods::checkData(data = dat17pca)
 
@@ -228,8 +232,7 @@ biplot(pcaDat17)
 
 ggbiplot2(pcaDat17)
 
-
-dat18pca<- as.matrix(t(dat18[,-1]))
+dat18pca<- as.matrix(dat18[,-1])
 
 pcaMethods::checkData(data = dat18pca)
 
@@ -243,11 +246,39 @@ biplot(pcaDat18)
 
 ggbiplot2(pcaDat18)
 
+##### GRYLD all years 
 
+gryld17<- pheno17 %>% 
+  select(entity_id:GRYLD) %>% 
+  clean_names()
+gryld18<- pheno18 %>% 
+  select(location:overall_trial,gryld_2018_06_13) %>% 
+  dplyr::rename(gryld = gryld_2018_06_13)
 
+gryld<- gryld17 %>% 
+  bind_rows(gryld18) %>% 
+  mutate(variety = as.factor(variety),
+         year = as.factor(year),
+         location = as.factor(location),
+         trial = as.factor(trial),
+         range = as.factor(range),
+         column = as.factor(column))
 
+gryldBlup<- asreml(fixed = gryld ~ 1,
+                   random = ~ variety 
+                   + year 
+                   + year:location
+                   + year:location:trial
+                   ,
+                   data = gryld)
+plot(gryldBlup)
+summary(gryldBlup)
 
+gryldBLUP<- setDT(as.data.frame(coef(gryldBlup)$random), keep.rownames = T)
+gryldBLUP<- gryldBLUP %>% 
+  filter(str_detect(rn,"variety_")) %>% 
+  tidylog::mutate(rn = str_remove(rn,"variety_"))
 
-
-
+write.table(gryldBLUP,"./PhenoDatabase/GRYLD_Blups_allyrs.txt", quote = F,
+            sep = "\t", row.names = F,col.names = T)
 
