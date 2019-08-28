@@ -6,6 +6,7 @@ library(tidylog)
 library(janitor)
 library(broom)
 library(asreml)
+library(ggrepel)
 
 set.seed(1990)
 asreml.license.status()
@@ -218,30 +219,40 @@ write.table(dat18,"./PhenoDatabase/BLUPs_2018.txt", quote = F, sep = "\t",
             row.names = F, col.names = T)
 
 #### PCA of phenotypes
-dat17pca<- as.matrix(dat17[,-1])
+dat17pca<- as.matrix(t(dat17[,-1]))
 
 pcaMethods::checkData(data = dat17pca)
 
 pcaDat17<- prcomp(dat17pca)
 summary(pcaDat17)
 
-scores<- as.data.frame(pcaDat17$x)
-ggplot(data = scores, aes(x = PC1,y = PC2)) +
-  geom_point()
+scores<- setDT(as.data.frame(pcaDat17$x), keep.rownames = T)
+scores<- scores %>% 
+  separate(rn, c("trait_id","phenotype_date"))
+  
+ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() 
+  
 biplot(pcaDat17)
 
 ggbiplot2(pcaDat17)
 
-dat18pca<- as.matrix(dat18[,-1])
+dat18pca<- as.matrix(t(dat18[,-1]))
 
 pcaMethods::checkData(data = dat18pca)
 
 pcaDat18<- prcomp(dat18pca)
 summary(pcaDat18)
 
-scores<- as.data.frame(pcaDat18$x)
-ggplot(data = scores, aes(x = PC1,y = PC2)) +
-  geom_point()
+scores<- setDT(as.data.frame(pcaDat18$x), keep.rownames = T)
+scores<- scores %>% 
+  separate(rn, c("trait_id","phenotype_date"))
+
+ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() 
+
 biplot(pcaDat18)
 
 ggbiplot2(pcaDat18)
