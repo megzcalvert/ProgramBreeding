@@ -7,6 +7,7 @@ library(janitor)
 library(broom)
 library(asreml)
 library(ggrepel)
+library(Polychrome)
 
 set.seed(1990)
 asreml.license.status()
@@ -29,13 +30,13 @@ custom_theme<- theme_minimal() %+replace%
         axis.ticks.length = unit(3,"pt"),
         axis.line = element_line(color = "black",
                                  size = 0.5),
-        legend.key.size = unit(4,"lines"),
+        legend.key.size = unit(1,"lines"),
         # legend.background = element_rect(fill = NULL, colour = NULL),
         # legend.box = NULL,
         legend.margin = margin(t = 0, r = 0.75,
                                b = 0, l = 0.75,
                                unit = "cm"),
-        legend.text = element_text(size = rel(2)),
+        legend.text = element_text(size = rel(1)),
         legend.title = element_text(size = rel(1.5)),
         panel.grid.major = element_line(colour = "#969696",
                                         linetype = 3),
@@ -146,7 +147,7 @@ for (i in traits) {
   blues$rn<- str_remove(blues$rn,"Variety_")
   colnames(blues)[colnames(blues)=="effect"] <- paste(i)
   dat17<- blues %>% 
-    inner_join(dat17)
+    dplyr::inner_join(dat17, by = "rn")
   
 }
 
@@ -186,8 +187,6 @@ traits
 fieldInfo<- pheno18 %>% 
   tidylog::select(variety, location, trial, range, column)
 
-
-
 for (i in traits) {
   print(paste("Working on trait", i))
   
@@ -195,15 +194,15 @@ for (i in traits) {
   names(data)<- c("Variety","Location","Trial","range","column","Trait")
   print(colnames(data))
   
-  t17<- asreml(fixed = Trait ~ 1,
+  t18<- asreml(fixed = Trait ~ 1,
                random = ~ Variety + Trial + column,
                data = data) 
   
   pdf(paste0("./Figures/AsremlPlots/ASREML_repBlock18_",i,".pdf"))
-  plot(t17)
+  plot(t18)
   dev.off()
-  print(summary(t17))
-  blues<- setDT(as.data.frame(coef(t17)$random), keep.rownames = T)
+  print(summary(t18))
+  blues<- setDT(as.data.frame(coef(t18)$random), keep.rownames = T)
   blues$rn<- str_remove(blues$rn,"Variety_")
   colnames(blues)[colnames(blues)=="effect"] <- paste(i)
   dat18<- blues %>% 
@@ -228,15 +227,23 @@ summary(pcaDat17)
 
 scores<- setDT(as.data.frame(pcaDat17$x), keep.rownames = T)
 scores<- scores %>% 
-  separate(rn, c("trait_id","phenotype_date"))
-  
+  separate(rn, c("trait_id","phenotype_date"), sep = "_") %>% 
+  filter(trait_id != "Height") %>% 
+  mutate(phenotype_date = replace_na(phenotype_date,"2017-06-20"))
+
 ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
                           shape = trait_id)) +
-  geom_point() 
-  
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) +
+  scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
+                                 "#be0032","#848482","#008856","#e68fac",
+                                 "#0067a5","#604e97","#f6a600","#b3446c",
+                                 "#882d17","#8db600","#e25822","#222222"))
+
 biplot(pcaDat17)
 
-ggbiplot2(pcaDat17)
+#ggbiplot2(pcaDat17)
 
 dat18pca<- as.matrix(t(dat18[,-1]))
 
@@ -247,15 +254,25 @@ summary(pcaDat18)
 
 scores<- setDT(as.data.frame(pcaDat18$x), keep.rownames = T)
 scores<- scores %>% 
-  separate(rn, c("trait_id","phenotype_date"))
+  separate(rn, c("trait_id","phenotype_year","phenotype_month",
+                 "phenotype_day"),sep = "_") %>% 
+  filter(trait_id != "canopy") %>% 
+  unite("phenotype_date", phenotype_year,phenotype_month,phenotype_day,
+        sep = "-")
 
 ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
                           shape = trait_id)) +
-  geom_point() 
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) + 
+  scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
+                                 "#be0032","#848482","#008856","#e68fac",
+                                 "#0067a5","#604e97","#f6a600","#b3446c",
+                                 "#882d17","#8db600","#e25822","#222222"))
 
 biplot(pcaDat18)
 
-ggbiplot2(pcaDat18)
+#ggbiplot2(pcaDat18)
 
 ##### GRYLD all years 
 
