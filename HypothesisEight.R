@@ -135,31 +135,39 @@ selectTop<- function(dat, traits, file, identifier, selecTrait, ...) {
       top_frac(0.05, Trait)
     
     tidyT<-tidy(t.test(mT$selecTrait,topSelec$selecTrait))
+    tidyP<-tidy(t.test(mT$Trait,topSelec$Trait))
     
     plot1<- ggplot(data = dat,
                    mapping = aes_string(i)) +
       geom_histogram(colour = "black",
-                     fill = "white") +
-      geom_vline(xintercept = mean(mT$Trait)) +
+                     fill = "white",
+                     bins = 100) +
+      geom_vline(xintercept = mean(mT$Trait), linetype = 2) +
       geom_histogram(data = topSelec, 
                      mapping = aes(Trait),
-                     colour = "red") +
+                     colour = "red",
+                     bins = 100) +
       geom_vline(xintercept = mean(topSelec$Trait),
-                 colour = "red") 
+                 colour = "red", linetype = 2) +
+      labs(subtitle = paste0("T-test for difference in mean p-value = ",
+                             round(tidyP$p.value, 
+                                   digits = 3)))
     
     plot2<- ggplot(data = dat,
                    mapping = aes_string(selecTrait)) +
       geom_histogram(colour = "black",
-                     fill = "white") + 
-      geom_vline(xintercept = mean(mT$selecTrait)) +
+                     fill = "white",
+                     bins = 100) + 
+      geom_vline(xintercept = mean(mT$selecTrait), linetype = 2) +
       geom_histogram(data = topSelec, 
                      mapping = aes(selecTrait),
-                     colour = "red") +
+                     colour = "red",
+                     bins = 100) +
       geom_vline(xintercept = mean(topSelec$selecTrait),
-                 colour = "red") +
-      annotate("text", label = paste0("p-value = ",round(tidyT$p.value, 
-                                                         digits = 3)), 
-                y = 20, x = 0.2, size = 5)
+                 colour = "red", linetype = 2) +
+      labs(subtitle = paste0("T-test for difference in mean p-value = ",
+                             round(tidyT$p.value, 
+                                   digits = 3)))
     
     plots<- ggarrange(plot1,plot2)
     ggexport(plots, filename = paste0(file,identifier,"_",i,".png"),
