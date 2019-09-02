@@ -93,7 +93,8 @@ hist.plot <- function(traits, data, type, file, ...) {
   plotList = list()
   for (i in traits) {
     thisPlot <- ggplot(data = data, aes_string(x = i)) + 
-      geom_histogram(colour="black", fill="white") + 
+      geom_histogram(colour="black", fill="white",
+                     bins = 100) + 
       labs(title = paste0(type),
            x = i,
            y = "Frequency")

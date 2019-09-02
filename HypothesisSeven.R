@@ -236,10 +236,36 @@ ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
   geom_point() +
   theme(aspect.ratio = 1:1) +
   scale_shape_manual(values = c(0,15,1,2,8,11,9)) +
-  scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
-                                 "#be0032","#848482","#008856","#e68fac",
-                                 "#0067a5","#604e97","#f6a600","#b3446c",
-                                 "#882d17","#8db600","#e25822","#222222"))
+  scale_colour_manual(values = c("#875692","#f38400","#a1caf1","#be0032",
+                                 "#848482","#008856","#e68fac","#0067a5",
+                                 "#604e97","#f6a600","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC1 = 70.75%",
+       y = "PC2 = 9.37%")
+
+ggplot(data = scores, aes(x = PC1,y = PC3, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) +
+  scale_colour_manual(values = c("#875692","#f38400","#a1caf1","#be0032",
+                                 "#848482","#008856","#e68fac","#0067a5",
+                                 "#604e97","#f6a600","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC1 = 70.75%",
+       y = "PC3 = 6.7%")
+
+ggplot(data = scores, aes(x = PC2,y = PC3, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) +
+  scale_colour_manual(values = c("#875692","#f38400","#a1caf1","#be0032",
+                                 "#848482","#008856","#e68fac","#0067a5",
+                                 "#604e97","#f6a600","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC2 = 9.37%",
+       y = "PC3 = 6.7%")
 
 biplot(pcaDat17)
 
@@ -268,7 +294,36 @@ ggplot(data = scores, aes(x = PC1,y = PC2, colour = phenotype_date,
   scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
                                  "#be0032","#848482","#008856","#e68fac",
                                  "#0067a5","#604e97","#f6a600","#b3446c",
-                                 "#882d17","#8db600","#e25822","#222222"))
+                                 "#882d17","#8db600","#e25822","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC1 = 35.78%",
+       y = "PC2 = 13.66%")
+
+ggplot(data = scores, aes(x = PC1,y = PC3, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) + 
+  scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
+                                 "#be0032","#848482","#008856","#e68fac",
+                                 "#0067a5","#604e97","#f6a600","#b3446c",
+                                 "#882d17","#8db600","#e25822","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC1 = 35.78%",
+       y = "PC3 = 10.72%")
+
+ggplot(data = scores, aes(x = PC2,y = PC3, colour = phenotype_date,
+                          shape = trait_id)) +
+  geom_point() +
+  theme(aspect.ratio = 1:1) +
+  scale_shape_manual(values = c(0,15,1,2,8,11,9)) + 
+  scale_colour_manual(values = c("#f3c300","#875692","#f38400","#a1caf1",
+                                 "#be0032","#848482","#008856","#e68fac",
+                                 "#0067a5","#604e97","#f6a600","#b3446c",
+                                 "#882d17","#8db600","#e25822","#222222")) +
+  labs(title = "PCA of Phenotypic BLUPs",
+       x = "PC2 = 13.66%",
+       y = "PC3 = 10.72%")
 
 biplot(pcaDat18)
 
