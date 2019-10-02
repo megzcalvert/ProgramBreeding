@@ -1,4 +1,5 @@
-rm(list = objects()); ls()
+rm(list = objects())
+ls()
 
 library(tidyverse)
 library(data.table)
@@ -11,14 +12,15 @@ library(reshape2)
 getwd()
 set.seed(1964)
 
-wheatgenetics = dbConnect(MySQL( ),
-                          user=rstudioapi::askForPassword("Database user"),
-                          dbname='wheatgenetics', host='beocat.cis.ksu.edu',
-                          password = 
-                            rstudioapi::askForPassword("Database password"),
-                          port = 6306) 
+wheatgenetics <- dbConnect(MySQL(),
+  user = rstudioapi::askForPassword("Database user"),
+  dbname = "wheatgenetics", host = "beocat.cis.ksu.edu",
+  password =
+    rstudioapi::askForPassword("Database password"),
+  port = 6306
+)
 
-#SQL Query to get all AM Panel phenotype data
+# SQL Query to get all AM Panel phenotype data
 
 pheno_query <- "SELECT phenotype.entity_id,
 phenotype.trait_id,
@@ -38,34 +40,34 @@ wheatgenetics.phenotype.entity_id LIKE '%YN%-RP-%' OR
 wheatgenetics.phenotype.entity_id LIKE '%YN%-SA-%'OR
 wheatgenetics.phenotype.entity_id LIKE '%YN%-RL-%' ;"
 
-#run the query to get plot information
+# run the query to get plot information
 
 pheno <- dbGetQuery(wheatgenetics, pheno_query)
 str(pheno)
 
-#save original data
-getwd( ) #get working directory set if needed
+# save original data
+getwd() # get working directory set if needed
 
-saveRDS(pheno, "./PhenoDatabase/Pheno.RDS") 
+saveRDS(pheno, "./PhenoDatabase/Pheno.RDS")
 
-dbDisconnect(wheatgenetics) #disconnect from database
+dbDisconnect(wheatgenetics) # disconnect from database
 
 sessionInfo() # useful infos **reproducible research**
 rm(wheatgenetics, pheno_query, pheno)
 
-#Read in original data
-pheno_long<- readRDS("./PhenoDatabase/Pheno.RDS")
+# Read in original data
+pheno_long <- readRDS("./PhenoDatabase/Pheno.RDS")
 
-pheno_long$Variety<- str_replace(pheno_long$Variety, "~","-")
-pheno_long$Variety<- str_replace(pheno_long$Variety, "-K-","K-")
-pheno_long$Variety<- str_replace(pheno_long$Variety, "-M-","M-")
+pheno_long$Variety <- str_replace(pheno_long$Variety, "~", "-")
+pheno_long$Variety <- str_replace(pheno_long$Variety, "-K-", "K-")
+pheno_long$Variety <- str_replace(pheno_long$Variety, "-M-", "M-")
 glimpse(pheno_long)
 
 ## Divide out all important info from the entity_id
 # remove awns and pcthead as they were taken sporadically
 
 remove_outliers <- function(x, na.rm = TRUE, ...) {
-  qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
+  qnt <- quantile(x, probs = c(.25, .75), na.rm = na.rm, ...)
   H <- 2 * IQR(x, na.rm = na.rm)
   y <- x
   y[x < (qnt[1] - H)] <- NA
@@ -73,143 +75,156 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
   y
 }
 
-pheno_long<- pheno_long %>% 
-  mutate(Sep = entity_id) %>% 
-  separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") %>% 
-  tidylog::filter(trait_id != "AWNS") %>% 
-  tidylog::filter(trait_id != "PCTHEAD") %>% 
-  tidylog::filter(phenotype_value >= 0) %>% 
-  mutate(phenotype_value = as.numeric(phenotype_value)) %>% 
-  group_by(Year,Location,Trial,trait_id) %>% 
-  nest %>% 
-  mutate(removedOutliers = map(data,
-                               ~ remove_outliers(.x$phenotype_value))) %>% 
-  unnest() %>% 
-  ungroup() %>% 
-  tidylog::filter(removedOutliers < 6500) %>% 
-  tidylog::select(-location,-rep,-Plot,-phenotype_value) %>% 
-  rename(phenotype_value = removedOutliers) %>% 
-  mutate(ID = row_number()) %>% 
+pheno_long <- pheno_long %>%
+  mutate(Sep = entity_id) %>%
+  separate(Sep, c("Year", "Trial", "Location", "Treated", "Plot"), sep = "-") %>%
+  tidylog::filter(trait_id != "AWNS") %>%
+  tidylog::filter(trait_id != "PCTHEAD") %>%
+  tidylog::filter(phenotype_value >= 0) %>%
+  mutate(phenotype_value = as.numeric(phenotype_value)) %>%
+  group_by(Year, Location, Trial, trait_id) %>%
+  nest() %>%
+  mutate(removedOutliers = map(
+    data,
+    ~ remove_outliers(.x$phenotype_value)
+  )) %>%
+  unnest() %>%
+  ungroup() %>%
+  tidylog::filter(removedOutliers < 6500) %>%
+  tidylog::select(-location, -rep, -Plot, -phenotype_value) %>%
+  rename(phenotype_value = removedOutliers) %>%
+  mutate(ID = row_number()) %>%
   glimpse()
 
 unique(pheno_long$Trial)
 
-#Function to add a column based on a portion of text in another column
-ff = function(x, patterns, replacements = patterns, fill = NA, ...)
-{
+# Function to add a column based on a portion of text in another column
+ff <- function(x, patterns, replacements = patterns, fill = NA, ...) {
   stopifnot(length(patterns) == length(replacements))
-  
-  ans = rep_len(as.character(fill), length(x))    
-  empty = seq_along(x)
-  
-  for(i in seq_along(patterns)) {
-    greps = grepl(patterns[[i]], x[empty], ...)
-    ans[empty[greps]] = replacements[[i]]  
-    empty = empty[!greps]
+
+  ans <- rep_len(as.character(fill), length(x))
+  empty <- seq_along(x)
+
+  for (i in seq_along(patterns)) {
+    greps <- grepl(patterns[[i]], x[empty], ...)
+    ans[empty[greps]] <- replacements[[i]]
+    empty <- empty[!greps]
   }
-  
+
   return(ans)
 }
 
-#Adding an overall trial column
-pheno_long$OverallTrial<- ff(pheno_long$Trial, 
-                             c("AYN1","AYN2","AYN3","AYN4","DHAYN1","DHAYN2",
-                               "PYN","PYN1","PYN2","PYNA","PYNB",
-                               "GSPYN","DHPYN","DHPYN1","DHPYN2"), 
-                             c("AYN","AYN","AYN","AYN","DHAYN","DHAYN",
-                               "PYN","PYN","PYN","PYN","PYN",
-                               "GSPYN","DHPYN","DHPYN","DHPYN"),
-                             "NA", ignore.case = TRUE)
+# Adding an overall trial column
+pheno_long$OverallTrial <- ff(pheno_long$Trial,
+  c(
+    "AYN1", "AYN2", "AYN3", "AYN4", "DHAYN1", "DHAYN2",
+    "PYN", "PYN1", "PYN2", "PYNA", "PYNB",
+    "GSPYN", "DHPYN", "DHPYN1", "DHPYN2"
+  ),
+  c(
+    "AYN", "AYN", "AYN", "AYN", "DHAYN", "DHAYN",
+    "PYN", "PYN", "PYN", "PYN", "PYN",
+    "GSPYN", "DHPYN", "DHPYN", "DHPYN"
+  ),
+  "NA",
+  ignore.case = TRUE
+)
 
-pheno_long$Location<- as.factor(pheno_long$Location)
-pheno_long$Trial<- as.factor(pheno_long$Trial)
-pheno_long$Year<- as.factor(pheno_long$Year)
-traits<- unique(pheno_long$trait_id)
+pheno_long$Location <- as.factor(pheno_long$Location)
+pheno_long$Trial <- as.factor(pheno_long$Trial)
+pheno_long$Year <- as.factor(pheno_long$Year)
+traits <- unique(pheno_long$trait_id)
 
 for (i in traits) {
-  p<- pheno_long %>% 
-    tidylog::filter(trait_id == paste(i)) %>% 
+  p <- pheno_long %>%
+    tidylog::filter(trait_id == paste(i)) %>%
     ggplot(aes(x = phenotype_value, colour = Location)) +
     geom_density() +
     facet_wrap(Year ~ Trial, scales = "fixed") +
     theme_bw() +
     theme(axis.text = element_text(colour = "black")) +
     labs(title = paste(i))
-  ggsave(paste0("./Figures/Summary_",i,".png"), plot = p, width = 16, 
-         height = 16,
-         units = "cm")
+  ggsave(paste0("./Figures/Summary_", i, ".png"),
+    plot = p, width = 16,
+    height = 16,
+    units = "cm"
+  )
   print(p)
 }
 
 
-write.table(pheno_long, "./PhenoDatabase/PhenoLong.txt", quote = F, sep = "\t",
-            col.names = T, row.names = F)
+write.table(pheno_long, "./PhenoDatabase/PhenoLong.txt",
+  quote = F, sep = "\t",
+  col.names = T, row.names = F
+)
 
 # separating into traits
 unique(pheno_long$trait_id)
-phenoGryld<- pheno_long %>%    
+phenoGryld <- pheno_long %>%
   tidylog::filter(trait_id == "GRYLD")
-phenoPtht<- pheno_long %>%    
+phenoPtht <- pheno_long %>%
   tidylog::filter(trait_id == "PTHT")
-phenoMoist<- pheno_long %>%    
+phenoMoist <- pheno_long %>%
   tidylog::filter(trait_id == "MOIST")
-phenoTestwt<- pheno_long %>%    
+phenoTestwt <- pheno_long %>%
   tidylog::filter(trait_id == "TESTWT")
 
-gryld<- phenoGryld %>%
+gryld <- phenoGryld %>%
   group_by(Year) %>%
   do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
 
-ptht<- phenoPtht %>%
+ptht <- phenoPtht %>%
   group_by(Year) %>%
   do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
 
-moist<- phenoMoist %>%
+moist <- phenoMoist %>%
   group_by(Year) %>%
   do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
 
-testwt<- phenoTestwt %>%
+testwt <- phenoTestwt %>%
   group_by(Year) %>%
   do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
 
-pheno_longRep<- pheno_long %>% 
-  tidylog::select(-trait_id,-phenotype_value,-phenotype_date,
-                  -phenotype_person, -ID,-range,-column,-OverallTrial) %>% 
-  group_by(Year, Location, Trial, Treated, Variety) %>% 
-  distinct() %>% 
-  mutate(rep = row_number()) %>% 
-  inner_join(pheno_long, by = c("entity_id","Variety","Year","Trial",
-                                "Location","Treated")) %>%
-  select(ID,entity_id,Variety,Year,Trial,
-         Location,Treated,rep,range,column,
-         OverallTrial,trait_id,phenotype_value,
-         phenotype_date,phenotype_person) %>% 
-  glimpse 
+pheno_longRep <- pheno_long %>%
+  tidylog::select(
+    -trait_id, -phenotype_value, -phenotype_date,
+    -phenotype_person, -ID, -range, -column, -OverallTrial
+  ) %>%
+  group_by(Year, Location, Trial, Treated, Variety) %>%
+  distinct() %>%
+  mutate(rep = row_number()) %>%
+  inner_join(pheno_long, by = c(
+    "entity_id", "Variety", "Year", "Trial",
+    "Location", "Treated"
+  )) %>%
+  select(
+    ID, entity_id, Variety, Year, Trial,
+    Location, Treated, rep, range, column,
+    OverallTrial, trait_id, phenotype_value,
+    phenotype_date, phenotype_person
+  ) %>%
+  glimpse()
 
-write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt", quote = F, 
-            sep = "\t",col.names = T, row.names = F)
+write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt",
+  quote = F,
+  sep = "\t", col.names = T, row.names = F
+)
 
 glimpse(pheno_long)
 
-TrialSummary<- pheno_long %>% 
-  group_by(Year,Location,Trial) %>% 
-  summarise(n = n()) %>% 
+TrialSummary <- pheno_long %>%
+  group_by(Year, Location, Trial) %>%
+  summarise(n = n()) %>%
   glimpse()
 
-VarietySummary<- pheno_long %>% 
-  group_by(Year,Location,Trial,Variety) %>% 
+VarietySummary <- pheno_long %>%
+  group_by(Year, Location, Trial, Variety) %>%
   summarise(n = n())
 
-VarSummary<- pheno_long %>% 
-  group_by(Variety, Year, Location, Trial) %>% 
+VarSummary <- pheno_long %>%
+  group_by(Variety, Year, Location, Trial) %>%
   summarise(n = n())
-write.table(VarSummary, file = "./PhenoDatabase/VarietySummary.txt", quote = F,
-            sep = "\t", row.names = F, col.names = T)
-
-
-
-
-
-
-
-
+write.table(VarSummary,
+  file = "./PhenoDatabase/VarietySummary.txt", quote = F,
+  sep = "\t", row.names = F, col.names = T
+)

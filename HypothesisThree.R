@@ -1,4 +1,5 @@
-rm(list = objects()); ls()
+rm(list = objects())
+ls()
 
 library(tidyverse)
 library(data.table)
@@ -11,275 +12,313 @@ library(broom)
 ## End of season phenotypes
 set.seed(1973)
 
-pheno<- fread("./PhenoDatabase/PhenoLongRep.txt")
+pheno <- fread("./PhenoDatabase/PhenoLongRep.txt")
 
 ## Vegetation indices
 # 2016-2017 season
-fileNames<- list.files(path = "./PhenoDatabase/2016_2017",
-                       full.names = T)
-traitNames<- basename(fileNames) %>%
+fileNames <- list.files(
+  path = "./PhenoDatabase/2016_2017",
+  full.names = T
+)
+traitNames <- basename(fileNames) %>%
   str_remove_all(c("traits_2016-2017_|_no_fills|.xlsx"))
 
-read_excel_sheets<- function(fileNames, traitNames, ...) {
-  traitNames<- fileNames %>% 
-    excel_sheets() %>% 
-    set_names() %>% 
-    map_df(~ read_excel(path = fileNames, sheet = .x), .id = "trait_id") 
+read_excel_sheets <- function(fileNames, traitNames, ...) {
+  traitNames <- fileNames %>%
+    excel_sheets() %>%
+    set_names() %>%
+    map_df(~ read_excel(path = fileNames, sheet = .x), .id = "trait_id")
 }
 
-data17<- lapply(fileNames, read_excel_sheets)
-names(data17)<- traitNames
+data17 <- lapply(fileNames, read_excel_sheets)
+names(data17) <- traitNames
 
-data17<- plyr::ldply(data17, data.frame, .id = "Field") %>% 
-  gather(key = "phenotype_date", value = "phenotype_value",X42880:X42894) %>%
-  rename(entity_id = Plot_ID) %>% 
-  drop_na(phenotype_value) %>% 
-  tidylog::filter(entity_id != "Fill") %>% 
-  tidylog::filter( str_detect(entity_id, "AYN|PYN")) %>% 
+data17 <- plyr::ldply(data17, data.frame, .id = "Field") %>%
+  gather(key = "phenotype_date", value = "phenotype_value", X42880:X42894) %>%
+  rename(entity_id = Plot_ID) %>%
+  drop_na(phenotype_value) %>%
+  tidylog::filter(entity_id != "Fill") %>%
+  tidylog::filter(str_detect(entity_id, "AYN|PYN")) %>%
   glimpse()
 
 # Because excel dates are stupid
-data17$phenotype_date<- as.numeric(sub('.', '', data17$phenotype_date))
-data17$phenotype_date<- as.Date(data17$phenotype_date,origin = "1899-12-30")
+data17$phenotype_date <- as.numeric(sub(".", "", data17$phenotype_date))
+data17$phenotype_date <- as.Date(data17$phenotype_date, origin = "1899-12-30")
 
-data17<- data17 %>% 
-  select(-Field) %>% 
-  mutate(Sep = entity_id) %>% 
-  separate(Sep, c("Year","Trial","Location","Treated","Plot"), sep = "-") 
+data17 <- data17 %>%
+  select(-Field) %>%
+  mutate(Sep = entity_id) %>%
+  separate(Sep, c("Year", "Trial", "Location", "Treated", "Plot"), sep = "-")
 
 # Checking data is there and makes sense
 
-data17 %>% 
+data17 %>%
   ggplot(aes(x = factor(phenotype_date), y = phenotype_value, colour = Trial)) +
   geom_boxplot() +
   facet_wrap(trait_id ~ Location, scales = "free", ncol = 5) +
   theme_bw() +
-  theme(axis.text = element_text(size = 12)) + 
-  scale_color_manual(values = c('#e41a1c','#377eb8','#4daf4a',
-                                '#984ea3','#ff7f00','#ffff33',
-                                '#a65628','#f781bf','#999999'))
+  theme(axis.text = element_text(size = 12)) +
+  scale_color_manual(values = c(
+    "#e41a1c", "#377eb8", "#4daf4a",
+    "#984ea3", "#ff7f00", "#ffff33",
+    "#a65628", "#f781bf", "#999999"
+  ))
 
-data17<- data17 %>% 
-  unite("trait_id", trait_id,phenotype_date, sep = "_") %>% 
-  spread(key = trait_id, value = phenotype_value) 
+data17 <- data17 %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  spread(key = trait_id, value = phenotype_value)
 
 # 2017-2018 Season
-data18<- tibble()
-htpPheno<-c("GNDVI","NDRE","NDVI","Nir","RE","CanopyHeight")
+data18 <- tibble()
+htpPheno <- c("GNDVI", "NDRE", "NDVI", "Nir", "RE", "CanopyHeight")
 
-load.file<- function (filename) {
-  d<- fread(file = filename,header = TRUE,check.names = F,data.table = F)
+load.file <- function(filename) {
+  d <- fread(file = filename, header = TRUE, check.names = F, data.table = F)
   d
 }
 
-for(i in htpPheno) {
-  fileNames<- list.files(path = "./PhenoDatabase/2017_2018",
-                         full.names = T,
-                         pattern = paste0(i,".csv"))
-  
-  traitNames<- basename(fileNames) %>%
+for (i in htpPheno) {
+  fileNames <- list.files(
+    path = "./PhenoDatabase/2017_2018",
+    full.names = T,
+    pattern = paste0(i, ".csv")
+  )
+
+  traitNames <- basename(fileNames) %>%
     str_remove_all(c(".csv"))
-  
-  data<- lapply(fileNames,load.file)
-  names(data)<- traitNames 
-  
-  data<- plyr::ldply(data, data.frame, .id = "Phenotype")
+
+  data <- lapply(fileNames, load.file)
+  names(data) <- traitNames
+
+  data <- plyr::ldply(data, data.frame, .id = "Phenotype")
   print(colnames(data))
-  data18<- bind_rows(data18,data)
+  data18 <- bind_rows(data18, data)
   rm(data)
 }
 
-data18L<- data18 %>% 
-  separate(Phenotype,c("Date","Location","Trait"), sep = "_") %>% 
-  unite("Trait", Trait, Date) %>% 
-  select(-CanopyHeight_top3,-SoilHeight,-X96p,-X97p,-X98p,-X99p,-X100p) %>% 
-  gather(key = "VI", value = "phenotypic_value",GNDVI:CanopyHeight_top5) %>%
-  distinct() %>% 
-  select(-VI) %>% 
-  drop_na(phenotypic_value) %>% 
+data18L <- data18 %>%
+  separate(Phenotype, c("Date", "Location", "Trait"), sep = "_") %>%
+  unite("Trait", Trait, Date) %>%
+  select(-CanopyHeight_top3, -SoilHeight, -X96p, -X97p, -X98p, -X99p, -X100p) %>%
+  gather(key = "VI", value = "phenotypic_value", GNDVI:CanopyHeight_top5) %>%
+  distinct() %>%
+  select(-VI) %>%
+  drop_na(phenotypic_value) %>%
   glimpse()
 
-data18L$Location<- str_remove(data18L$Location,"HE")
+data18L$Location <- str_remove(data18L$Location, "HE")
 
-# Different plot_id's to those in the database. Going to separate and pair by 
+# Different plot_id's to those in the database. Going to separate and pair by
 # position. Needs to be done separately by location
 
-pheno18<- pheno %>% 
-  filter(Year == "18") %>% 
+pheno18 <- pheno %>%
+  filter(Year == "18") %>%
   select(-phenotype_date)
 
-phenoSA18<- data18L %>% 
-  filter(Location == "SA") %>% 
-  separate(Plot_ID,c("Plot","Range","Column"), sep = ":") %>% 
-  mutate(Range = as.numeric(Range), 
-         Column = as.numeric(Column)) %>% 
-  arrange(Range, Column) %>% 
-  mutate(CorrectColumn = 48 - Range,
-         CorrectRange = 26 - Column) %>% 
-  select(-Range,-Column) %>%
-  rename(column = CorrectColumn, range = CorrectRange) %>% 
-  inner_join(pheno18, by = c("Location" = "Location", 
-                           "column" = "column",
-                           "range" = "range")) %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  spread(key = Trait, value = phenotypic_value) %>% 
-  select(-phenotype_person,-ID,-Plot) %>% 
-  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180530`) %>% 
-  drop_na(phenotype_value) %>% 
+phenoSA18 <- data18L %>%
+  filter(Location == "SA") %>%
+  separate(Plot_ID, c("Plot", "Range", "Column"), sep = ":") %>%
+  mutate(
+    Range = as.numeric(Range),
+    Column = as.numeric(Column)
+  ) %>%
+  arrange(Range, Column) %>%
+  mutate(
+    CorrectColumn = 48 - Range,
+    CorrectRange = 26 - Column
+  ) %>%
+  select(-Range, -Column) %>%
+  rename(column = CorrectColumn, range = CorrectRange) %>%
+  inner_join(pheno18, by = c(
+    "Location" = "Location",
+    "column" = "column",
+    "range" = "range"
+  )) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  spread(key = Trait, value = phenotypic_value) %>%
+  select(-phenotype_person, -ID, -Plot) %>%
+  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180530`) %>%
+  drop_na(phenotype_value) %>%
   distinct()
 
-phenoMP18<- data18L %>% 
-  filter(Location == "MCP") %>% 
-  separate(Plot_ID,c("Plot","column","range"), sep = ":") %>% 
-  mutate(range = as.numeric(range), 
-         column = as.numeric(column)) %>% 
-  arrange(column,range) %>% 
-  mutate(Location = "MP") %>% 
-  inner_join(pheno18, by = c("Location" = "Location",
-                           "column" = "column",
-                           "range" = "range")) %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  spread(key = Trait, value = phenotypic_value) %>% 
-  select(-phenotype_person,-ID,-Plot) %>% 
-  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180606`) %>% 
-  drop_na(phenotype_value) %>% 
+phenoMP18 <- data18L %>%
+  filter(Location == "MCP") %>%
+  separate(Plot_ID, c("Plot", "column", "range"), sep = ":") %>%
+  mutate(
+    range = as.numeric(range),
+    column = as.numeric(column)
+  ) %>%
+  arrange(column, range) %>%
+  mutate(Location = "MP") %>%
+  inner_join(pheno18, by = c(
+    "Location" = "Location",
+    "column" = "column",
+    "range" = "range"
+  )) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  spread(key = Trait, value = phenotypic_value) %>%
+  select(-phenotype_person, -ID, -Plot) %>%
+  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180606`) %>%
+  drop_na(phenotype_value) %>%
   distinct()
 
-phenoRP18<- data18L %>% 
-  filter(Location == "RP") %>% 
-  separate(Plot_ID,c("Plot","range","column"), sep = ":") %>% 
-  mutate(range = as.numeric(range), 
-         column = as.numeric(column)) %>% 
-  mutate(column = 58 - column) %>% 
-  arrange(column,range) %>% 
-  inner_join(pheno18, by = c("Location" = "Location",
-                           "column" = "column",
-                           "range" = "range")) %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  spread(key = Trait, value = phenotypic_value) %>% 
-  select(-phenotype_person,-ID,-Plot) %>% 
-  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180611`) %>% 
-  drop_na(phenotype_value) %>% 
+phenoRP18 <- data18L %>%
+  filter(Location == "RP") %>%
+  separate(Plot_ID, c("Plot", "range", "column"), sep = ":") %>%
+  mutate(
+    range = as.numeric(range),
+    column = as.numeric(column)
+  ) %>%
+  mutate(column = 58 - column) %>%
+  arrange(column, range) %>%
+  inner_join(pheno18, by = c(
+    "Location" = "Location",
+    "column" = "column",
+    "range" = "range"
+  )) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  spread(key = Trait, value = phenotypic_value) %>%
+  select(-phenotype_person, -ID, -Plot) %>%
+  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180611`) %>%
+  drop_na(phenotype_value) %>%
   distinct()
 
-#This one needs to be checked only similar plot ID's and they don't match
-phenoRN18<- data18L %>% 
-  filter(Location == "RN") %>% 
-  separate(Plot_ID,c("Plot","range","column"), sep = ":") %>% 
-  mutate(range = as.numeric(range), 
-         column = as.numeric(column)) %>%
-  mutate(Plot = str_replace(Plot, "-U-","-T-"),
-         range = 28 - range,
-         id = row_number())  %>% 
-  select(-Plot,) %>% 
-  inner_join(pheno18, by = c("Location" = "Location",
-                           "column" = "column",
-                           "range" = "range")) %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  spread(key = Trait, value = phenotypic_value) %>% 
-  select(-phenotype_person,-id,-ID) %>% 
-  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180530`) %>% 
-  drop_na(phenotype_value) %>% 
+# This one needs to be checked only similar plot ID's and they don't match
+phenoRN18 <- data18L %>%
+  filter(Location == "RN") %>%
+  separate(Plot_ID, c("Plot", "range", "column"), sep = ":") %>%
+  mutate(
+    range = as.numeric(range),
+    column = as.numeric(column)
+  ) %>%
+  mutate(
+    Plot = str_replace(Plot, "-U-", "-T-"),
+    range = 28 - range,
+    id = row_number()
+  ) %>%
+  select(-Plot, ) %>%
+  inner_join(pheno18, by = c(
+    "Location" = "Location",
+    "column" = "column",
+    "range" = "range"
+  )) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  spread(key = Trait, value = phenotypic_value) %>%
+  select(-phenotype_person, -id, -ID) %>%
+  gather(key = trait_id, value = phenotype_value, GRYLD:`RE_20180530`) %>%
+  drop_na(phenotype_value) %>%
   distinct()
 
-data18<- phenoMP18 %>% 
-  bind_rows(phenoRN18,phenoRP18,phenoSA18) %>% 
-  separate(trait_id, c("trait_id","phenotype_date"), sep = "_") %>% 
+data18 <- phenoMP18 %>%
+  bind_rows(phenoRN18, phenoRP18, phenoSA18) %>%
+  separate(trait_id, c("trait_id", "phenotype_date"), sep = "_") %>%
   mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d")) %>%
-  mutate(phenotype_date = replace_na(phenotype_date, "2018-06-13")) %>% 
-  distinct() %>% 
+  mutate(phenotype_date = replace_na(phenotype_date, "2018-06-13")) %>%
+  distinct() %>%
   glimpse()
 
-data18 %>% 
-  ggplot(aes(x = factor(phenotype_date), 
-             y = phenotype_value, 
-             colour = Trial)) +
+data18 %>%
+  ggplot(aes(
+    x = factor(phenotype_date),
+    y = phenotype_value,
+    colour = Trial
+  )) +
   geom_boxplot() +
-  facet_wrap(Location~trait_id, scales = "free") +
+  facet_wrap(Location ~ trait_id, scales = "free") +
   theme_bw()
 
-rm(pheno18,data18L,phenoMP18,phenoRN18,phenoRP18,phenoSA18)
+rm(pheno18, data18L, phenoMP18, phenoRN18, phenoRP18, phenoSA18)
 
 ###### Correlation with GRYLD #####
 ## 2017
-pheno17<- pheno %>% 
-  filter(Year == "17" & trait_id == "GRYLD") %>% 
-  select(-ID,-phenotype_date,-phenotype_person) %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  drop_na(GRYLD) 
+pheno17 <- pheno %>%
+  filter(Year == "17" & trait_id == "GRYLD") %>%
+  select(-ID, -phenotype_date, -phenotype_person) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  drop_na(GRYLD)
 
-plots_missingVI<- pheno17 %>% 
+plots_missingVI <- pheno17 %>%
   anti_join(data17, by = "entity_id")
 
-pheno17W<- data17 %>% 
-  select(-Year,-Trial,-Location,-Treated,-Plot) %>% 
-  left_join(x = pheno17, by = "entity_id") 
+pheno17W <- data17 %>%
+  select(-Year, -Trial, -Location, -Treated, -Plot) %>%
+  left_join(x = pheno17, by = "entity_id")
 
-pheno17L<- pheno17W %>% 
-  gather(key = "trait_id",value = "phenotypic_value",12:76) %>% 
+pheno17L <- pheno17W %>%
+  gather(key = "trait_id", value = "phenotypic_value", 12:76) %>%
   drop_na(phenotypic_value)
 colnames(pheno17L)
 
-write_delim(pheno17L,"./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
-write_delim(data18,"./PhenoDatabase/PhenoVI_18.txt", delim = "\t")
+write_delim(pheno17L, "./PhenoDatabase/PhenoLong_vi17.txt", delim = "\t")
+write_delim(data18, "./PhenoDatabase/PhenoVI_18.txt", delim = "\t")
 
-nested17<- pheno17L %>% 
-  filter(Location != "RP" 
-         #& #Trial!= "GSPYN" 
-         #& trait_id != "GNDVI_2017-05-24"
-  ) %>% 
-  tidylog::select(-entity_id, -Variety, -range, 
-                  -column, -Year, -Treated,-OverallTrial) %>% 
-  group_by(Location, Trial, trait_id) %>% 
-  nest() %>% 
-  mutate(correlation = map(data, ~ cor.test(.x$GRYLD,.x$phenotypic_value)),
-         tidyCor = map(correlation,glance)) %>% 
-  unnest(tidyCor) %>% 
-  tidylog::select(-data,-correlation) %>% 
-  separate(trait_id,c("trait_id","Date"), sep = "_")
+nested17 <- pheno17L %>%
+  filter(
+    Location != "RP"
+    # & #Trial!= "GSPYN"
+    # & trait_id != "GNDVI_2017-05-24"
+  ) %>%
+  tidylog::select(
+    -entity_id, -Variety, -range,
+    -column, -Year, -Treated, -OverallTrial
+  ) %>%
+  group_by(Location, Trial, trait_id) %>%
+  nest() %>%
+  mutate(
+    correlation = map(data, ~ cor.test(.x$GRYLD, .x$phenotypic_value)),
+    tidyCor = map(correlation, glance)
+  ) %>%
+  unnest(tidyCor) %>%
+  tidylog::select(-data, -correlation) %>%
+  separate(trait_id, c("trait_id", "Date"), sep = "_")
 
 nested17$Date <- as.Date(nested17$Date)
 
-nested17 %>% 
-  filter(p.value > 0.05) %>% 
+nested17 %>%
+  filter(p.value > 0.05) %>%
   ggplot(aes(x = Date, y = estimate, colour = Trial)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
   facet_wrap(trait_id ~ Location, scales = "free", ncol = 3) +
   theme_bw() +
   theme(axis.text = element_text(colour = "black")) +
-  coord_cartesian(ylim = c(-1,1)) +
+  coord_cartesian(ylim = c(-1, 1)) +
   labs(title = "Correlation between GRYLD and VI 2017")
 
 ## 2018
 
-pheno18nested<- data18 %>% 
-  filter(trait_id != "PTHT") %>% 
-  unite("trait_id",trait_id,phenotype_date, sep = "_") %>% 
-  spread(key = trait_id, value = phenotype_value) %>% 
-  gather(key = "trait_id",value = "phenotype_value", 
-         `CanopyHeight_2017-12-01`:`GNDVI_2018-06-11`,
-         `NDRE_2017-12-01`:`RE_2018-06-11`) %>% 
-  drop_na(phenotype_value) %>% 
-  group_by(Location, Trial, trait_id) %>% 
-  nest() %>% 
-  mutate(correlation = map(data, ~ cor.test(.x$`GRYLD_2018-06-13`,
-                                            .x$phenotype_value)),
-         tidyCor = map(correlation,glance)) %>% 
-  unnest(tidyCor) %>% 
-  tidylog::select(-data,-correlation) %>% 
-  separate(trait_id,c("trait_id","Date"), sep = "_")
+pheno18nested <- data18 %>%
+  filter(trait_id != "PTHT") %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  gather(
+    key = "trait_id", value = "phenotype_value",
+    `CanopyHeight_2017-12-01`:`GNDVI_2018-06-11`,
+    `NDRE_2017-12-01`:`RE_2018-06-11`
+  ) %>%
+  drop_na(phenotype_value) %>%
+  group_by(Location, Trial, trait_id) %>%
+  nest() %>%
+  mutate(
+    correlation = map(data, ~ cor.test(
+      .x$`GRYLD_2018-06-13`,
+      .x$phenotype_value
+    )),
+    tidyCor = map(correlation, glance)
+  ) %>%
+  unnest(tidyCor) %>%
+  tidylog::select(-data, -correlation) %>%
+  separate(trait_id, c("trait_id", "Date"), sep = "_")
 
 pheno18nested$Date <- as.Date(pheno18nested$Date)
 
-pheno18nested %>% 
-  filter(p.value > 0.05) %>% 
+pheno18nested %>%
+  filter(p.value > 0.05) %>%
   ggplot(aes(x = Date, y = estimate, colour = Trial)) +
   geom_point() +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
   facet_wrap(trait_id ~ Location, scales = "free", ncol = 4) +
   theme_bw() +
   theme(axis.text = element_text(colour = "black")) +
-  coord_cartesian(ylim = c(-1,1)) +
+  coord_cartesian(ylim = c(-1, 1)) +
   labs(title = "Correlation between GRYLD and VI 2018")
-
