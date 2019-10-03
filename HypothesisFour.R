@@ -154,8 +154,8 @@ pheno17_H2 <- pheno17 %>%
     model = map(
       data,
       ~ lmer(
-        phenotype_value ~ (1 | Variety) + (1 | rep) + (1 | column) +
-          (1 | range),
+        phenotype_value ~ (1 | Variety) + (1 | rep:column)  +
+          (1 | rep:range),
         data = .
       )
     ),
@@ -190,7 +190,7 @@ pheno18_H2 <- pheno18 %>%
     model = map(
       data,
       ~ lmer(phenotype_value ~
-      (1 | Variety) + (1 | rep) + (1 | column) + (1 | range),
+      (1 | Variety) + (1 | rep:column) + (1 | rep:range),
       data = .
       )
     ),
