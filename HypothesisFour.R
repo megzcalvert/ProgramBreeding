@@ -273,19 +273,17 @@ pheno18asreml <- pheno18 %>%
 ## 2017
 t17 <- asreml(
   fixed = GNDVI_20170506_AYN2_MP ~ 1,
-  random = ~ Variety + rep + range + column,
+  random = ~ Variety + rep:range + rep:column,
   data = pheno17asreml
 )
 plot(t17)
 coef(t17)$random
-fitted(t17)
 summary(t17)
-resid(t17)
 
 h <- as.data.frame(summary(t17)$varcomp)
 h
 
-h2 <- as.data.frame(h[4, 1] / (h[4, 1] + (h[5, 1] / harmonic17)))
+h2 <- as.data.frame(h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic17)))
 h2
 
 ## 2017 all
@@ -310,11 +308,11 @@ for (i in ntraits) {
 
   t17 <- asreml(
     fixed = Trait ~ 1,
-    random = ~ Variety + rep + range + column,
+    random = ~ Variety + rep:range + rep:column,
     data = data
   )
   pdf(paste0(
-    "./Figures/AsremlPlots/ASREML_repRangeColumn17_", H2_2017[i, 1],
+    "./Figures/AsremlPlots/Heritability/ASREML_repRangeColumn17_", H2_2017[i, 1],
     ".pdf"
   ))
   plot(t17)
@@ -323,7 +321,7 @@ for (i in ntraits) {
   print(paste("Creating Data Frame", j))
   print(h)
 
-  h2 <- (h[4, 1] / (h[4, 1] + (h[5, 1] / harmonic17)))
+  h2 <- (h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic17)))
   h2
   H2_2017[i, 2] <- h2
 }
@@ -333,7 +331,7 @@ dev.off()
 ## 2018
 t17 <- asreml(
   fixed = GNDVI_20170506_AYN2_MP ~ 1,
-  random = ~ Variety + rep + range + column,
+  random = ~ Variety + rep:range + rep:column,
   data = pheno17asreml
 )
 plot(t17)
@@ -345,7 +343,7 @@ resid(t17)
 h <- as.data.frame(summary(t17)$varcomp)
 h
 
-h2 <- as.data.frame(h[4, 1] / (h[4, 1] + (h[5, 1] / harmonic18)))
+h2 <- as.data.frame(h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic18)))
 h2
 
 ## 2018 all
@@ -370,11 +368,11 @@ for (i in ntraits) {
 
   t18 <- asreml(
     fixed = Trait ~ 1,
-    random = ~ Variety + rep + range + column,
+    random = ~ Variety + rep:range + rep:column,
     data = data
   )
   pdf(paste0(
-    "./Figures/AsremlPlots/ASREML_repRangeColumn18_", H2_2018[i, 1],
+    "./Figures/AsremlPlots/Heritability/ASREML_repRangeColumn18_", H2_2018[i, 1],
     ".pdf"
   ))
   plot(t17)
@@ -383,7 +381,7 @@ for (i in ntraits) {
   print(paste("Creating Data Frame", j))
   print(h)
 
-  h2 <- (h[4, 1] / (h[4, 1] + (h[5, 1] / harmonic18)))
+  h2 <- (h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic18)))
   h2
   H2_2018[i, 2] <- h2
 }
