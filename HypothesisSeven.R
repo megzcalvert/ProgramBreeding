@@ -103,8 +103,12 @@ theme_set(custom_theme)
 
 #### Read in data
 pheno17 <- fread("./PhenoDatabase/PhenoLong_vi17.txt")
+linesLoaded_17 <- as.data.frame(unique(pheno17$Variety))
+names(linesLoaded_17) <- "Variety"
 
 pheno18 <- fread("./PhenoDatabase/PhenoVI_18.txt")
+linesLoaded_18 <- as.data.frame(unique(pheno18$Variety))
+names(linesLoaded_18) <- "Variety"
 
 #### Move from long to wide
 pheno17 <- pheno17 %>%
@@ -116,7 +120,7 @@ pheno17 <- pheno17 %>%
     rep = as.factor(rep),
     range = as.factor(range),
     column = as.factor(column)
-  ) 
+  )
 
 pheno18 <- pheno18 %>%
   filter(trait_id != "PTHT") %>%
@@ -129,7 +133,7 @@ pheno18 <- pheno18 %>%
     rep = as.factor(rep),
     range = as.factor(range),
     column = as.factor(column)
-  ) 
+  )
 
 #### Asreml trial
 
@@ -148,22 +152,36 @@ plot(t17)
 summary.asreml(t17)
 
 blues <- setDT(as.data.frame(coef(t17)$random), keep.rownames = T)
-blues$rn <- str_remove(blues$rn, "Variety_")
-dat17 <- blues %>%
+
+blues <- blues %>%
+  filter(str_detect(rn, "Variety_")) %>%
+  filter(!str_detect(rn, "Location_")) %>%
+  filter(!str_detect(rn, "Trial_")) %>%
+  mutate(rn = str_remove(rn, "Variety_")) %>%
   rename(all_gryld_2017 = effect) %>%
   glimpse()
 
-pheno17<- pheno17 %>% 
+dat17 <- linesLoaded_17 %>%
+  left_join(blues, by = c("Variety" = "rn"))
+
+pheno17 <- pheno17 %>%
   pivot_longer(`GNDVI_2017-05-06`:`RedEdge_2017-06-16`,
-               names_to = "trait_id") %>% 
-  separate(trait_id, c("trait_id","phenotype_date"), sep = "_") %>% 
-  mutate(phenotype_date = as.Date(phenotype_date, format = "%Y-%m-%d"),
-         phenotype_date = format(phenotype_date, "%Y%m%d"),
-         trait_id = str_replace(trait_id,"RedEdge","Rededge")) %>% 
-  unite("trait_id",Location,trait_id,phenotype_date, sep = "_") %>% 
-  drop_na(value) %>% 
-  pivot_wider(names_from = trait_id, values_from = value) %>% 
+    names_to = "trait_id"
+  ) %>%
+  separate(trait_id, c("trait_id", "phenotype_date"), sep = "_") %>%
+  filter(trait_id != "Height") %>%
+  mutate(
+    phenotype_date = as.Date(phenotype_date, format = "%Y-%m-%d"),
+    phenotype_date = format(phenotype_date, "%Y%m%d"),
+    trait_id = str_replace(trait_id, "RedEdge", "Rededge")
+  ) %>%
+  unite("trait_id", Location, trait_id, phenotype_date, sep = "_") %>%
+  drop_na(value) %>%
+  pivot_wider(names_from = trait_id, values_from = value) %>%
+  select(-RP_NDRE_20170524, -RP_NDVI_20170616) %>%
   clean_names()
+
+varieties17 <- dat17$rn
 
 ##### Generating all 2017 VI BLUEs
 
@@ -182,6 +200,8 @@ for (i in traits) {
 
   data <- cbind(fieldInfo, pheno17[, paste(i)])
   names(data) <- c("Variety", "Trial", "range", "column", "Trait")
+  data <- data %>%
+    drop_na(Trait)
   print(colnames(data))
 
   t17 <- asreml(
@@ -190,15 +210,22 @@ for (i in traits) {
     data = data
   )
 
-  pdf(paste0("./Figures/AsremlPlots/ASREML_TrialColumnRange_17_", i, ".pdf"))
+  pdf(paste0(
+    "./Figures/AsremlPlots/BLUPs/ASREML_TrialColumnRange_17_",
+    i, ".pdf"
+  ))
   plot(t17)
   dev.off()
   print(summary(t17))
   blues <- setDT(as.data.frame(coef(t17)$random), keep.rownames = T)
-  blues$rn <- str_remove(blues$rn, "Variety_")
+  blues <- blues %>%
+    filter(str_detect(rn, "Variety_")) %>%
+    filter(!str_detect(rn, "Location_")) %>%
+    filter(!str_detect(rn, "Trial_")) %>%
+    mutate(rn = str_remove(rn, "Variety_"))
   colnames(blues)[colnames(blues) == "effect"] <- paste(i)
-  dat17 <- blues %>%
-    dplyr::inner_join(dat17, by = "rn")
+  dat17 <- dat17 %>%
+    dplyr::left_join(blues, by = c("Variety" = "rn"))
 }
 
 warnings()
@@ -206,11 +233,11 @@ warnings()
 #### Asreml trial
 
 colnames(pheno18)
-colnames(pheno18)[colnames(pheno18)=="GRYLD_2018-06-13"] <- "GRYLD_20180613"
+colnames(pheno18)[colnames(pheno18) == "GRYLD_2018-06-13"] <- "GRYLD_20180613"
 colnames(pheno18)
 
 t18 <- asreml(
-  fixed =  GRYLD_20180613 ~ 1,
+  fixed = GRYLD_20180613 ~ 1,
   random = ~ Variety
   + Location
     + Location:Variety
@@ -224,24 +251,32 @@ plot(t18)
 summary.asreml(t18)
 
 blues <- setDT(as.data.frame(coef(t18)$random), keep.rownames = T)
-blues$rn <- str_remove(blues$rn, "Variety_")
-dat18 <- blues %>%
-  rename(all_gryld_20180613 = effect) %>%
+
+blues <- blues %>%
+  filter(str_detect(rn, "Variety_")) %>%
+  filter(!str_detect(rn, "Location_")) %>%
+  filter(!str_detect(rn, "Trial_")) %>%
+  mutate(rn = str_remove(rn, "Variety_")) %>%
+  rename(all_gryld_2018 = effect) %>%
   glimpse()
 
-colnames(pheno18)
+dat18 <- linesLoaded_18 %>%
+  left_join(blues, by = c("Variety" = "rn"))
 
-pheno18<- pheno18 %>% 
+pheno18 <- pheno18 %>%
   pivot_longer(`CanopyHeight_2017-12-01`:`RE_2018-06-11`,
-               names_to = "trait_id") %>% 
-  separate(trait_id, c("trait_id","phenotype_date"), sep = "_") %>% 
-  filter(trait_id != "GRYLD") %>% 
-  mutate(phenotype_date = as.Date(phenotype_date, format = "%Y-%m-%d"),
-         phenotype_date = format(phenotype_date, "%Y%m%d"),
-         trait_id = str_replace(trait_id,"CanopyHeight","canopyheight")) %>% 
-  unite("trait_id",Location,trait_id,phenotype_date, sep = "_") %>% 
-  drop_na(value) %>% 
-  pivot_wider(names_from = trait_id, values_from = value) %>% 
+    names_to = "trait_id"
+  ) %>%
+  separate(trait_id, c("trait_id", "phenotype_date"), sep = "_") %>%
+  filter(trait_id != "GRYLD") %>%
+  mutate(
+    phenotype_date = as.Date(phenotype_date, format = "%Y-%m-%d"),
+    phenotype_date = format(phenotype_date, "%Y%m%d"),
+    trait_id = str_replace(trait_id, "CanopyHeight", "canopyheight")
+  ) %>%
+  unite("trait_id", Location, trait_id, phenotype_date, sep = "_") %>%
+  drop_na(value) %>%
+  pivot_wider(names_from = trait_id, values_from = value) %>%
   clean_names()
 
 ##### Generating all 2018 VI BLUEs
@@ -261,6 +296,13 @@ for (i in traits) {
 
   data <- cbind(fieldInfo, pheno18[, paste(i)])
   names(data) <- c("Variety", "Trial", "range", "column", "Trait")
+  data <- data %>%
+    mutate(
+      Variety = as.factor(Variety),
+      Trial = as.factor(Trial),
+      range = as.factor(range),
+      column = as.factor(column)
+    )
   print(colnames(data))
 
   t18 <- asreml(
@@ -269,32 +311,50 @@ for (i in traits) {
     data = data
   )
 
-  pdf(paste0("./Figures/AsremlPlots/ASREML_TrialColumnRange_18_", i, ".pdf"))
+  pdf(paste0(
+    "./Figures/AsremlPlots/BLUPs/ASREML_TrialColumnRange_18_",
+    i, ".pdf"
+  ))
   plot(t18)
   dev.off()
   print(summary(t18))
   blues <- setDT(as.data.frame(coef(t18)$random), keep.rownames = T)
-  blues$rn <- str_remove(blues$rn, "Variety_")
+  blues <- blues %>%
+    filter(str_detect(rn, "Variety_")) %>%
+    filter(!str_detect(rn, "Location_")) %>%
+    filter(!str_detect(rn, "Trial_")) %>%
+    mutate(rn = str_remove(rn, "Variety_"))
+
   colnames(blues)[colnames(blues) == "effect"] <- paste(i)
-  dat18 <- blues %>%
-    inner_join(dat18)
+
+  dat18 <- dat18 %>%
+    left_join(blues, by = c("Variety" = "rn"))
 }
 
 warnings()
 
 colnames(dat17)
-dat17<- dat17 %>% 
-  pivot_longer(rl_rededge_20170609:all_gryld_2017, names_to = "trait_id", 
-               values_to = "phenotype_value") %>% 
-  separate(trait_id, into = c("location","trait_id","phenotype_date"),
-           sep = "_") 
+
+dat17 <- dat17 %>%
+  pivot_longer(rl_rededge_20170609:all_gryld_2017,
+    names_to = "trait_id",
+    values_to = "phenotype_value"
+  ) %>%
+  separate(trait_id,
+    into = c("location", "trait_id", "phenotype_date"),
+    sep = "_"
+  )
 
 colnames(dat18)
-dat18<- dat18 %>% 
-  pivot_longer(sa_re_20180530:all_gryld_20180613, names_to = "trait_id", 
-               values_to = "phenotype_value") %>% 
-  separate(trait_id, into = c("location","trait_id","phenotype_date"),
-           sep = "_")
+dat18 <- dat18 %>%
+  pivot_longer(sa_re_20180530:all_gryld_2018,
+    names_to = "trait_id",
+    values_to = "phenotype_value"
+  ) %>%
+  separate(trait_id,
+    into = c("location", "trait_id", "phenotype_date"),
+    sep = "_"
+  )
 
 
 write.table(dat17, "./PhenoDatabase/BLUPs_TrialColumnRange_2017.txt",
@@ -316,7 +376,7 @@ summary(pcaDat17)
 
 scores <- setDT(as.data.frame(pcaDat17$x), keep.rownames = T)
 scores <- scores %>%
-  separate(rn, c("location","trait_id", "phenotype_date"), sep = "_") %>%
+  separate(rn, c("location", "trait_id", "phenotype_date"), sep = "_") %>%
   filter(trait_id != "height") %>%
   mutate(phenotype_date = replace_na(phenotype_date, "2017-06-20"))
 
@@ -388,9 +448,9 @@ summary(pcaDat18)
 scores <- setDT(as.data.frame(pcaDat18$x), keep.rownames = T)
 scores <- scores %>%
   separate(rn, c(
-    "location","trait_id","phenotype_date"
+    "location", "trait_id", "phenotype_date"
   ), sep = "_") %>%
-  filter(trait_id != "canopyheight") %>% 
+  filter(trait_id != "canopyheight") %>%
   mutate(phenotype_date = str_replace(phenotype_date, "na", "20180613"))
 
 ggplot(data = scores, aes(
@@ -400,12 +460,12 @@ ggplot(data = scores, aes(
   geom_point() +
   theme(aspect.ratio = 1:1) +
   scale_shape_manual(values = c(0, 15, 1, 2, 8, 11, 9)) +
-   scale_colour_manual(values = c(
-     "#f3c300", "#875692", "#f38400", "#a1caf1",
-     "#be0032", "#848482", "#008856", "#e68fac",
-     "#0067a5", "#604e97", "#f6a600", "#b3446c",
-     "#882d17", "#8db600", "#e25822", "#222222"
-   )) +
+  scale_colour_manual(values = c(
+    "#f3c300", "#875692", "#f38400", "#a1caf1",
+    "#be0032", "#848482", "#008856", "#e68fac",
+    "#0067a5", "#604e97", "#f6a600", "#b3446c",
+    "#882d17", "#8db600", "#e25822", "#222222"
+  )) +
   labs(
     title = "PCA of Phenotypic BLUPs",
     x = "PC1 = 36.3%",
@@ -456,12 +516,43 @@ biplot(pcaDat18)
 
 ##### GRYLD all years
 
+pheno17 <- fread("./PhenoDatabase/PhenoLong_vi17.txt")
+
+pheno18 <- fread("./PhenoDatabase/PhenoVI_18.txt")
+
+#### Move from long to wide
+pheno17 <- pheno17 %>%
+  spread(key = trait_id, value = phenotypic_value) %>%
+  mutate(
+    Location = as.factor(Location),
+    Variety = as.factor(Variety),
+    Trial = as.factor(Trial),
+    rep = as.factor(rep),
+    range = as.factor(range),
+    column = as.factor(column)
+  )
+
+pheno18 <- pheno18 %>%
+  filter(trait_id != "PTHT") %>%
+  unite("trait_id", trait_id, phenotype_date) %>%
+  spread(key = trait_id, value = phenotype_value) %>%
+  mutate(
+    Location = as.factor(Location),
+    Variety = as.factor(Variety),
+    Trial = as.factor(Trial),
+    rep = as.factor(rep),
+    range = as.factor(range),
+    column = as.factor(column)
+  )
+
 gryld17 <- pheno17 %>%
-  select(entity_id:gryld) %>%
+  select(entity_id:GRYLD) %>%
   clean_names()
+
 gryld18 <- pheno18 %>%
-  select(location:overall_trial, gryld_2018_06_13) %>%
-  dplyr::rename(gryld = gryld_2018_06_13)
+  tidylog::select(Location:OverallTrial, `GRYLD_2018-06-13`) %>%
+  dplyr::rename(gryld = `GRYLD_2018-06-13`) %>%
+  clean_names()
 
 gryld <- gryld17 %>%
   bind_rows(gryld18) %>%
@@ -479,7 +570,9 @@ gryldBlup <- asreml(
   random = ~ variety
   + year
     + year:location
-    + year:location:trial,
+    + year:location:trial
+    + year:location:trial:range
+    + year:location:trial:column,
   data = gryld
 )
 plot(gryldBlup)

@@ -322,7 +322,7 @@ for (i in ntraits) {
   print(h)
 
   h2 <- (h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic17)))
-  h2
+  (h2)
   H2_2017[i, 2] <- h2
 }
 
@@ -382,7 +382,7 @@ for (i in ntraits) {
   print(h)
 
   h2 <- (h[2, 1] / (h[2, 1] + (h[4, 1] / harmonic18)))
-  h2
+  (h2)
   H2_2018[i, 2] <- h2
 }
 
@@ -405,7 +405,8 @@ H2_2018 <- H2_2018 %>%
   mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d"))
 
 H2_2017 %>%
-  filter(trait_id != "GRYLD") %>%
+  #filter(trait_id != "GRYLD") %>%
+  mutate(phenotype_date = replace_na(phenotype_date, "2017-06-13")) %>% 
   ggplot(aes(x = phenotype_date, y = Heritability, colour = trial)) +
   geom_point(size = 2) +
   facet_wrap(c("trait_id", "location"), scales = "free", ncol = 3) +
@@ -417,11 +418,12 @@ H2_2017 %>%
   )
 
 H2_2018 %>%
-  filter(trait_id != "GRYLD") %>%
+  #filter(trait_id != "GRYLD") %>%
+  mutate(phenotype_date = replace_na(phenotype_date, "2018-06-13")) %>% 
   ggplot(aes(x = phenotype_date, y = Heritability, colour = trial)) +
   geom_point(size = 2) +
   facet_wrap(c("trait_id", "location"), scales = "free", ncol = 4) +
-  scale_x_date(date_breaks = "20 days", date_labels = "%m/%d") +
+  scale_x_date(date_breaks = "21 days", date_labels = "%m/%d") +
   coord_cartesian(ylim = c(0, 1)) +
   labs(
     title = "Broad-sense Heritability Asreml",
