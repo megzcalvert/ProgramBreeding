@@ -9,9 +9,99 @@ library(janitor)
 library(broom)
 library(reshape2)
 
+#### Theme set ####
+custom_theme <- theme_minimal() %+replace%
+  theme(
+    axis.title = element_text(
+      colour = "black",
+      size = rel(2)
+    ),
+    axis.title.x = element_text(
+      vjust = 0,
+      margin = margin(
+        t = 0, r = 0.25,
+        b = 0, l = 0,
+        unit = "cm"
+      )
+    ),
+    axis.title.y = element_text(
+      vjust = 1,
+      angle = 90,
+      margin = margin(
+        t = 0, r = 0.25,
+        b = 0, l = 0.1,
+        unit = "cm"
+      )
+    ),
+    axis.text = element_text(
+      colour = "black",
+      size = rel(1.5)
+    ),
+    axis.ticks = element_line(colour = "black"),
+    axis.ticks.length = unit(3, "pt"),
+    axis.line = element_line(
+      color = "black",
+      size = 0.5
+    ),
+    legend.key.size = unit(4, "lines"),
+    # legend.background = element_rect(fill = NULL, colour = NULL),
+    # legend.box = NULL,
+    legend.margin = margin(
+      t = 0, r = 0.75,
+      b = 0, l = 0.75,
+      unit = "cm"
+    ),
+    legend.text = element_text(size = rel(2)),
+    legend.title = element_text(size = rel(1.5)),
+    panel.grid.major = element_line(
+      colour = "#969696",
+      linetype = 3
+    ),
+    panel.grid.minor = element_blank(),
+    plot.tag = element_text(
+      size = rel(2),
+      margin = margin(
+        t = 0.1, r = 0.1,
+        b = 0.1, l = 0.1,
+        unit = "cm"
+      )
+    ),
+    plot.margin = margin(
+      t = 0.5, r = 0.5,
+      b = 0.5, l = 0,
+      unit = "cm"
+    ),
+    plot.title = element_text(
+      colour = "black",
+      size = rel(3),
+      vjust = 0,
+      hjust = 0,
+      margin = margin(
+        t = 0.25, r = 0.25,
+        b = 0.5, l = 0.25,
+        unit = "cm"
+      )
+    ),
+    strip.background = element_rect(
+      fill = "white",
+      colour = "black",
+      size = 1
+    ),
+    strip.text = element_text(
+      colour = "black",
+      size = rel(1)
+    ),
+    complete = F
+  )
+
+theme_set(custom_theme)
+
 getwd()
 set.seed(1964)
+# useful infos **reproducible research**
+sessionInfo()
 
+#### Connect to database ####
 wheatgenetics <- dbConnect(MySQL(),
   user = rstudioapi::askForPassword("Database user"),
   dbname = "wheatgenetics", host = "beocat.cis.ksu.edu",
@@ -31,7 +121,9 @@ plot.plot_name AS 'Variety',
 plot.location,
 plot.range,
 plot.column,
-plot.rep
+plot.rep,
+plot.block,
+plot.treatment
 FROM wheatgenetics.phenotype LEFT JOIN 
 wheatgenetics.plot ON plot.plot_id = phenotype.entity_id 
 WHERE wheatgenetics.phenotype.entity_id LIKE '%YN%-MP-%' OR
@@ -46,55 +138,48 @@ pheno <- dbGetQuery(wheatgenetics, pheno_query)
 str(pheno)
 
 # save original data
-getwd() # get working directory set if needed
-
 saveRDS(pheno, "./PhenoDatabase/Pheno.RDS")
 
-dbDisconnect(wheatgenetics) # disconnect from database
+# disconnect from database
+dbDisconnect(wheatgenetics)
 
-sessionInfo() # useful infos **reproducible research**
 rm(wheatgenetics, pheno_query, pheno)
 
 # Read in original data
 pheno_long <- readRDS("./PhenoDatabase/Pheno.RDS")
 
-pheno_long$Variety <- str_replace(pheno_long$Variety, "~", "-")
-pheno_long$Variety <- str_replace(pheno_long$Variety, "-K-", "K-")
-pheno_long$Variety <- str_replace(pheno_long$Variety, "-M-", "M-")
+# Fix all the annoying naming inconsistencies
+pheno_long <- pheno_long %>%
+  mutate(
+    Variety = str_replace(Variety, "~", "-"),
+    Variety = str_replace(Variety, "-K-", "K-"),
+    Variety = str_replace(Variety, "-M-", "M-"),
+    Variety = str_replace(Variety, " ", "-"),
+    Variety = str_replace(Variety, "-", "_"),
+    Variety = tolower(Variety)
+  ) %>%
+  mutate(
+    treatment = if_else(treatment == "Fungicide", "TREATED", "UNTREATED")
+  )
 glimpse(pheno_long)
 
 ## Divide out all important info from the entity_id
 # remove awns and pcthead as they were taken sporadically
 
-remove_outliers <- function(x, na.rm = TRUE, ...) {
-  qnt <- quantile(x, probs = c(.25, .75), na.rm = na.rm, ...)
-  H <- 2 * IQR(x, na.rm = na.rm)
-  y <- x
-  y[x < (qnt[1] - H)] <- NA
-  y[x > (qnt[2] + H)] <- NA
-  y
-}
-
 pheno_long <- pheno_long %>%
-  mutate(Sep = entity_id) %>%
-  separate(Sep, c("Year", "Trial", "Location", "Treated", "Plot"), sep = "-") %>%
-  tidylog::filter(trait_id != "AWNS") %>%
-  tidylog::filter(trait_id != "PCTHEAD") %>%
-  tidylog::filter(phenotype_value >= 0) %>%
-  mutate(phenotype_value = as.numeric(phenotype_value)) %>%
-  group_by(Year, Location, Trial, trait_id) %>%
-  nest() %>%
-  mutate(removedOutliers = map(
-    data,
-    ~ remove_outliers(.x$phenotype_value)
-  )) %>%
-  unnest() %>%
-  ungroup() %>%
-  tidylog::filter(removedOutliers < 6500) %>%
-  tidylog::select(-location, -rep, -Plot, -phenotype_value) %>%
-  rename(phenotype_value = removedOutliers) %>%
-  mutate(ID = row_number()) %>%
-  glimpse()
+  mutate(
+    Sep = entity_id,
+    phenotype_value = as.numeric(phenotype_value),
+    ID = row_number()
+  ) %>%
+  separate(Sep,
+    c("Year", "Trial", "Location", "Treated", "Plot"),
+    sep = "-"
+  ) %>%
+  filter(trait_id != "AWNS") %>%
+  filter(trait_id != "PCTHEAD") %>%
+  filter(phenotype_value >= 0) %>%
+  filter(phenotype_value <= 6500)
 
 unique(pheno_long$Trial)
 
@@ -117,22 +202,29 @@ ff <- function(x, patterns, replacements = patterns, fill = NA, ...) {
 # Adding an overall trial column
 pheno_long$OverallTrial <- ff(pheno_long$Trial,
   c(
-    "AYN1", "AYN2", "AYN3", "AYN4", "DHAYN1", "DHAYN2",
-    "PYN", "PYN1", "PYN2", "PYNA", "PYNB",
-    "GSPYN", "DHPYN", "DHPYN1", "DHPYN2"
+    "AYN3", "PYN", "GSPYN", "AYN2", "DHPYN", "AYN1",
+    "AYN4", "PYN1", "PYN2", "DHPYN1", "DHPYN2", "DHAYN2",
+    "DHAYN1", "PYNA", "PYNB", "PYN3", "PYN4", "GSAYN",
+    "ATAYN1", "ATAYN2"
   ),
   c(
-    "AYN", "AYN", "AYN", "AYN", "DHAYN", "DHAYN",
-    "PYN", "PYN", "PYN", "PYN", "PYN",
-    "GSPYN", "DHPYN", "DHPYN", "DHPYN"
+    "AYN", "PYN", "PYN", "AYN", "PYN", "AYN", "AYN",
+    "PYN", "PYN", "PYN", "PYN", "AYN", "AYN", "PYN",
+    "PYN", "PYN", "PYN", "AYN", "AYN", "AYN"
   ),
   "NA",
   ignore.case = TRUE
 )
 
-pheno_long$Location <- as.factor(pheno_long$Location)
-pheno_long$Trial <- as.factor(pheno_long$Trial)
-pheno_long$Year <- as.factor(pheno_long$Year)
+# adjusting factors
+pheno_long <- pheno_long %>%
+  mutate(
+    Location = as.factor(Location),
+    Trial = as.factor(Trial),
+    Year = as.factor(Year)
+  )
+
+# Which phenotypic traits are we working with
 traits <- unique(pheno_long$trait_id)
 
 for (i in traits) {
@@ -140,7 +232,7 @@ for (i in traits) {
     tidylog::filter(trait_id == paste(i)) %>%
     ggplot(aes(x = phenotype_value, colour = Location)) +
     geom_density() +
-    facet_wrap(Year ~ Trial, scales = "fixed") +
+    facet_wrap(Year ~ Trial, scales = "free") +
     theme_bw() +
     theme(axis.text = element_text(colour = "black")) +
     labs(title = paste(i))
@@ -188,22 +280,22 @@ testwt <- phenoTestwt %>%
 pheno_longRep <- pheno_long %>%
   tidylog::select(
     -trait_id, -phenotype_value, -phenotype_date,
-    -phenotype_person, -ID, -range, -column, -OverallTrial
+    -phenotype_person, -ID, -range, -column, -OverallTrial,
+    -location, -block, -rep, -treatment, -Plot
   ) %>%
   group_by(Year, Location, Trial, Treated, Variety) %>%
   distinct() %>%
-  mutate(rep = row_number()) %>%
+  mutate(repAssigned = row_number()) %>%
   inner_join(pheno_long, by = c(
     "entity_id", "Variety", "Year", "Trial",
     "Location", "Treated"
   )) %>%
   select(
     ID, entity_id, Variety, Year, Trial,
-    Location, Treated, rep, range, column,
+    Location, Treated, treatment, repAssigned, block, range, column,
     OverallTrial, trait_id, phenotype_value,
     phenotype_date, phenotype_person
-  ) %>%
-  glimpse()
+  )
 
 write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt",
   quote = F,
