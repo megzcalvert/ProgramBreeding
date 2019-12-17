@@ -1,15 +1,14 @@
 rm(list = objects())
 ls()
 
-library(tidyverse)
 library(data.table)
+library(tidyverse)
 library(tidylog)
-library(RMySQL)
 library(janitor)
 library(broom)
-library(reshape2)
 
-#### Theme set ####
+#### Setting up workspace ####
+
 custom_theme <- theme_minimal() %+replace%
   theme(
     axis.title = element_text(
@@ -43,7 +42,7 @@ custom_theme <- theme_minimal() %+replace%
       color = "black",
       size = 0.5
     ),
-    legend.key.size = unit(4, "lines"),
+    legend.key.size = unit(2, "lines"),
     # legend.background = element_rect(fill = NULL, colour = NULL),
     # legend.box = NULL,
     legend.margin = margin(
@@ -52,7 +51,7 @@ custom_theme <- theme_minimal() %+replace%
       unit = "cm"
     ),
     legend.text = element_text(size = rel(2)),
-    legend.title = element_text(size = rel(1.5)),
+    legend.title = element_text(size = rel(2)),
     panel.grid.major = element_line(
       colour = "#969696",
       linetype = 3
@@ -89,7 +88,7 @@ custom_theme <- theme_minimal() %+replace%
     ),
     strip.text = element_text(
       colour = "black",
-      size = rel(1)
+      size = rel(2)
     ),
     complete = F
   )
@@ -97,226 +96,110 @@ custom_theme <- theme_minimal() %+replace%
 theme_set(custom_theme)
 
 getwd()
-set.seed(1964)
+
 # useful infos **reproducible research**
 sessionInfo()
 
-#### Connect to database ####
-wheatgenetics <- dbConnect(MySQL(),
-  user = rstudioapi::askForPassword("Database user"),
-  dbname = "wheatgenetics", host = "beocat.cis.ksu.edu",
-  password =
-    rstudioapi::askForPassword("Database password"),
-  port = 6306
+################## Initial scenario ##################
+
+budget <- 100000
+## per breeding *cycle*
+Line_dev_cost <- 10
+## the cost of generating an inbred line, applied to either form of evaluation
+ayn_number <- 100
+## number of AYN to be planted
+
+pheno_cost <- 85
+## cost to phenotype in field
+pheno_rep <- 6
+## number of phenotyping plots planted
+pheno_cycle_length <- 7
+## number of years phenotypic selection cycle takes
+
+geno_cost <- 5
+## cost to genotype
+geno_cycle_length <- 1
+## number of years prediction selection cycle takes
+
+# Number of plots if only phenotyping
+only_pheno <- floor(budget / (Line_dev_cost + (pheno_cost * pheno_rep)))
+
+# Number of plots if only predicting
+only_geno <- floor(budget / (Line_dev_cost + geno_cost))
+
+## Visualisng the parameter space
+pheno_plots <- c(0, only_pheno)
+geno_plots <- c(only_geno, 0)
+
+dat <- tibble::tibble(
+  cost = geno_plots, pheno_plots
 )
 
-# SQL Query to get all AM Panel phenotype data
-
-pheno_query <- "SELECT phenotype.entity_id,
-phenotype.trait_id,
-phenotype.phenotype_value,
-phenotype.phenotype_date,
-phenotype.phenotype_person,
-plot.plot_name AS 'Variety',
-plot.location,
-plot.range,
-plot.column,
-plot.rep,
-plot.block,
-plot.treatment
-FROM wheatgenetics.phenotype LEFT JOIN 
-wheatgenetics.plot ON plot.plot_id = phenotype.entity_id 
-WHERE wheatgenetics.phenotype.entity_id LIKE '%YN%-MP-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%YN%-RN-%' OR 
-wheatgenetics.phenotype.entity_id LIKE '%YN%-RP-%' OR
-wheatgenetics.phenotype.entity_id LIKE '%YN%-SA-%'OR
-wheatgenetics.phenotype.entity_id LIKE '%YN%-RL-%' ;"
-
-# run the query to get plot information
-
-pheno <- dbGetQuery(wheatgenetics, pheno_query)
-str(pheno)
-
-# save original data
-saveRDS(pheno, "./PhenoDatabase/Pheno.RDS")
-
-# disconnect from database
-dbDisconnect(wheatgenetics)
-
-rm(wheatgenetics, pheno_query, pheno)
-
-# Read in original data
-pheno_long <- readRDS("./PhenoDatabase/Pheno.RDS")
-
-# Fix all the annoying naming inconsistencies
-pheno_long <- pheno_long %>%
-  mutate(
-    Variety = str_replace(Variety, "~", "-"),
-    Variety = str_replace(Variety, "-K-", "K-"),
-    Variety = str_replace(Variety, "-M-", "M-"),
-    Variety = str_replace(Variety, " ", "-"),
-    Variety = str_replace(Variety, "-", "_"),
-    Variety = tolower(Variety)
-  ) %>%
-  mutate(
-    treatment = if_else(treatment == "Fungicide", "TREATED", "UNTREATED")
+basicPlot <- ggplot(
+  data = dat,
+  aes(
+    x = pheno_plots,
+    y = geno_plots
   )
-glimpse(pheno_long)
+) +
+  geom_point() +
+  geom_path()
+basicPlot
 
-## Divide out all important info from the entity_id
-# remove awns and pcthead as they were taken sporadically
+#### Defining it for the entire parameter space ####
 
-pheno_long <- pheno_long %>%
-  mutate(
-    Sep = entity_id,
-    phenotype_value = as.numeric(phenotype_value),
-    ID = row_number()
-  ) %>%
-  separate(Sep,
-    c("Year", "Trial", "Location", "Treated", "Plot"),
-    sep = "-"
-  ) %>%
-  filter(trait_id != "AWNS") %>%
-  filter(trait_id != "PCTHEAD") %>%
-  filter(phenotype_value >= 0) %>%
-  filter(phenotype_value <= 6500)
+budget <- 100000
+## per breeding *cycle*
+Line_dev_cost <- 10
+## the cost of generating an inbred line, applied to either form of evaluation
+ayn_number <- 100
+## number of AYN to be planted
 
-unique(pheno_long$Trial)
+pheno_cost <- 85
+## cost to phenotype in field
+pheno_rep <- 6
+## number of phenotyping plots planted
+pheno_cycle_length <- 7
+## number of years phenotypic selection cycle takes
+h_pheno <- 0.8
+## Heritability of yield in pheno
 
-# Function to add a column based on a portion of text in another column
-ff <- function(x, patterns, replacements = patterns, fill = NA, ...) {
-  stopifnot(length(patterns) == length(replacements))
+geno_cost <- 5
+## cost to genotype
+geno_cycle_length <- 5
+## number of years prediction selection cycle takes
+pred_accuracy <- 0.75
+## Prediction accuracy that is synonymous with genetic correlation
+h_predTrait <- 1
+## assumes the genome in an inbred is 100% heritable and all additive
 
-  ans <- rep_len(as.character(fill), length(x))
-  empty <- seq_along(x)
+# Number of plots if only phenotyping
+only_pheno <- floor(budget / (Line_dev_cost + (pheno_cost * pheno_rep)))
+number_pheno <- as.integer(0:only_pheno)
 
-  for (i in seq_along(patterns)) {
-    greps <- grepl(patterns[[i]], x[empty], ...)
-    ans[empty[greps]] <- replacements[[i]]
-    empty <- empty[!greps]
-  }
+# Number of plots if only predicting
+only_geno <- floor(budget / (Line_dev_cost + geno_cost))
+number_geno <- as.integer(0:only_geno)
 
-  return(ans)
-}
+# Creating dataframe of all combinations
+df <- crossing(number_geno, number_pheno)
 
-# Adding an overall trial column
-pheno_long$OverallTrial <- ff(pheno_long$Trial,
-  c(
-    "AYN3", "PYN", "GSPYN", "AYN2", "DHPYN", "AYN1",
-    "AYN4", "PYN1", "PYN2", "DHPYN1", "DHPYN2", "DHAYN2",
-    "DHAYN1", "PYNA", "PYNB", "PYN3", "PYN4", "GSAYN",
-    "ATAYN1", "ATAYN2"
-  ),
-  c(
-    "AYN", "PYN", "PYN", "AYN", "PYN", "AYN", "AYN",
-    "PYN", "PYN", "PYN", "PYN", "AYN", "AYN", "PYN",
-    "PYN", "PYN", "PYN", "AYN", "AYN", "AYN"
-  ),
-  "NA",
-  ignore.case = TRUE
-)
-
-# adjusting factors
-pheno_long <- pheno_long %>%
-  mutate(
-    Location = as.factor(Location),
-    Trial = as.factor(Trial),
-    Year = as.factor(Year)
-  )
-
-# Which phenotypic traits are we working with
-traits <- unique(pheno_long$trait_id)
-
-for (i in traits) {
-  p <- pheno_long %>%
-    tidylog::filter(trait_id == paste(i)) %>%
-    ggplot(aes(x = phenotype_value, colour = Location)) +
-    geom_density() +
-    facet_wrap(Year ~ Trial, scales = "free") +
-    theme_bw() +
-    theme(axis.text = element_text(colour = "black")) +
-    labs(title = paste(i))
-  ggsave(paste0("./Figures/Summary_", i, ".png"),
-    plot = p, width = 16,
-    height = 16,
-    units = "cm"
-  )
-  print(p)
-}
+df <- df %>%
+  mutate(correlated_response = 
+           (((ayn_number / number_geno) * pred_accuracy * sqrt(h_predTrait)) / 
+              geno_cycle_length),
+         direct_response = 
+           (((ayn_number / number_pheno) * sqrt(h_pheno)) / pheno_cycle_length),
+         response_ratio = correlated_response / direct_response) %>% 
+  filter(!is.infinite(response_ratio)) %>% 
+  mutate(log_response = log(response_ratio))
 
 
-write.table(pheno_long, "./PhenoDatabase/PhenoLong.txt",
-  quote = F, sep = "\t",
-  col.names = T, row.names = F
-)
-
-# separating into traits
-unique(pheno_long$trait_id)
-phenoGryld <- pheno_long %>%
-  tidylog::filter(trait_id == "GRYLD")
-phenoPtht <- pheno_long %>%
-  tidylog::filter(trait_id == "PTHT")
-phenoMoist <- pheno_long %>%
-  tidylog::filter(trait_id == "MOIST")
-phenoTestwt <- pheno_long %>%
-  tidylog::filter(trait_id == "TESTWT")
-
-gryld <- phenoGryld %>%
-  group_by(Year) %>%
-  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
-
-ptht <- phenoPtht %>%
-  group_by(Year) %>%
-  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
-
-moist <- phenoMoist %>%
-  group_by(Year) %>%
-  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
-
-testwt <- phenoTestwt %>%
-  group_by(Year) %>%
-  do(tidy(anova(lm(phenotype_value ~ Trial * Location, data = .))))
-
-pheno_longRep <- pheno_long %>%
-  tidylog::select(
-    -trait_id, -phenotype_value, -phenotype_date,
-    -phenotype_person, -ID, -range, -column, -OverallTrial,
-    -location, -block, -rep, -treatment, -Plot
-  ) %>%
-  group_by(Year, Location, Trial, Treated, Variety) %>%
-  distinct() %>%
-  mutate(repAssigned = row_number()) %>%
-  inner_join(pheno_long, by = c(
-    "entity_id", "Variety", "Year", "Trial",
-    "Location", "Treated"
-  )) %>%
-  select(
-    ID, entity_id, Variety, Year, Trial,
-    Location, Treated, treatment, repAssigned, block, range, column,
-    OverallTrial, trait_id, phenotype_value,
-    phenotype_date, phenotype_person
-  )
-
-write.table(pheno_longRep, "./PhenoDatabase/PhenoLongRep.txt",
-  quote = F,
-  sep = "\t", col.names = T, row.names = F
-)
-
-glimpse(pheno_long)
-
-TrialSummary <- pheno_long %>%
-  group_by(Year, Location, Trial) %>%
-  summarise(n = n()) %>%
-  glimpse()
-
-VarietySummary <- pheno_long %>%
-  group_by(Year, Location, Trial, Variety) %>%
-  summarise(n = n())
-
-VarSummary <- pheno_long %>%
-  group_by(Variety, Year, Location, Trial) %>%
-  summarise(n = n())
-write.table(VarSummary,
-  file = "./PhenoDatabase/VarietySummary.txt", quote = F,
-  sep = "\t", row.names = F, col.names = T
-)
+gainPlot <- ggplot(data = df,
+                   aes(x = number_pheno, 
+                       y = number_geno,
+                       fill = log_response)) +
+  geom_raster() +
+  scale_fill_gradient2(low = "#762a83", 
+                       high = "#1b7837")
+gainPlot
