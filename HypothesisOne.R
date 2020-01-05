@@ -210,7 +210,7 @@ SearchingGeneticGainParameters <- function(budget = budget,
     filter(
       !is.infinite(response_ratio),
       !is.na(response_ratio),
-      response_ratio > 0
+      response_ratio >= 0
     )
 
   gainPlot <- ggplot(
@@ -221,7 +221,7 @@ SearchingGeneticGainParameters <- function(budget = budget,
       fill = response_ratio
     )
   ) +
-    geom_raster(interpolate = FALSE) +
+    geom_tile() + #interpolate = FALSE) +
     scale_fill_gradient2(
       low = "#762a83",
       mid = "#f7f7f7",
@@ -236,8 +236,8 @@ SearchingGeneticGainParameters <- function(budget = budget,
         " and AYN number ", ayn_number
       ),
       subtitle = paste0(
-        "pheno cost $", pheno_cost,
-        ", geno cost $", geno_cost,
+        "pheno cost = $", pheno_cost,
+        ", geno cost = $", geno_cost,
         ", direct h2 = ", h_pheno,
         ", correlated h2 = ", h_predTrait,
         ", r = ", pred_accuracy,
