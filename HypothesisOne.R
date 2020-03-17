@@ -81,6 +81,11 @@ custom_theme <- theme_minimal() %+replace%
         unit = "cm"
       )
     ),
+    plot.subtitle = element_text(
+      colour = "black",
+      size = rel(1.5),
+      hjust = 0
+    ),
     strip.background = element_rect(
       fill = "white",
       colour = "black",
@@ -606,14 +611,14 @@ GainByResponse <- function(
                            pheno_cost_end = pheno_cost_end, # cost to phenotype in field
                            pheno_cost_by = pheno_cost_by, # cost to phenotype in field
                            pheno_rep = pheno_rep, # number of phenotyping plots planted
-                           pheno_cycle_length = pheno_cycle_length, # number of years phenotypic selection cycle takes
+                           #pheno_cycle_length = pheno_cycle_length, # number of years phenotypic selection cycle takes
                            geno_cost_start = geno_cost_start, # cost to genotype
                            geno_cost_end = geno_cost_end, # cost to genotype
                            geno_cost_by = geno_cost_by, # cost to genotype
                            h_pheno_min = h_pheno_min, # Heritability of yield in pheno (min)
                            h_pheno_max = h_pheno_max, # Heritability of yield in pheno (max)
                            h_pheno_by = h_pheno_by,
-                           geno_cycle_length = geno_cycle_length, # number of years prediction selection cycle takes
+                           #geno_cycle_length = geno_cycle_length, # number of years prediction selection cycle takes
                            pred_accuracy_min = pred_accuracy_min, # Prediction accuracy that is synonymous with genetic correlation
                            pred_accuracy_max = pred_accuracy_max, # Prediction accuracy that is synonymous with genetic correlation
                            pred_accuracy_by = pred_accuracy_by,
@@ -640,7 +645,10 @@ GainByResponse <- function(
   )
 
   all_costs <- crossing(only_geno, only_pheno) %>%
-    filter(only_pheno > ayn_number + (0*ayn_number))
+    filter(only_pheno > (ayn_number * 1.5) )
+  
+  print(paste("Minimum phenotyped: ", min(all_costs$only_pheno)))
+  print(paste("Maximum phenotyped: ", max(all_costs$only_pheno)))
 
   costs <- nrow(all_costs)
 
@@ -746,11 +754,11 @@ GainByResponse <- function(
         correlated_intensity = correlated_intensity,
         direct_intensity = direct_intensity,
         correlated_response =
-          (correlated_intensity * pred_accuracy * sqrt(h_predTrait)) /
-            geno_cycle_length, # correlated response
+          (correlated_intensity * pred_accuracy * sqrt(h_predTrait)), #/
+           #geno_cycle_length, # correlated response
         direct_response =
-          (direct_intensity * sqrt(h_pheno)) /
-            pheno_cycle_length, # direct response
+          (direct_intensity * sqrt(h_pheno)),# /
+            #pheno_cycle_length, # direct response
         response_ratio = correlated_response / direct_response
       ) %>%
       filter(
@@ -758,7 +766,7 @@ GainByResponse <- function(
       ) %>%
       filter(
         !is.na(response_ratio)
-      ) %>% 
+      ) %>%
       filter(
         direct_intensity >= 0
       )
@@ -771,20 +779,20 @@ GainByResponse <- function(
 
 try1 <- GainByResponse(
   budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 85, # the cost of generating an inbred line, applied to either form of evaluation
+  Line_dev_cost = 40, # the cost of generating an inbred line, applied to either form of evaluation
   ayn_number = 100, # number of AYN to be planted
-  pheno_cost_start = 0, # cost to phenotype in field
-  pheno_cost_end = 750, # cost to phenotype in field
-  pheno_cost_by = 25, # cost to phenotype in field
+  pheno_cost_start = 35, # cost to phenotype in field
+  pheno_cost_end = 70, # cost to phenotype in field
+  pheno_cost_by = 5, # cost to phenotype in field
   pheno_rep = 6, # number of phenotyping plots planted
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
+  #pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
   geno_cost_start = 5, # cost to genotype
   geno_cost_end = 10, # cost to genotype
   geno_cost_by = 1, # cost to genotype
   h_pheno_min = 0, # Heritability of yield in pheno (min)
-  h_pheno_max = 1, # Heritability of yield in pheno (max)
-  h_pheno_by = 0.05,
-  geno_cycle_length = 0.25, # number of years prediction selection cycle takes
+  h_pheno_max = 0.2, # Heritability of yield in pheno (max)
+  h_pheno_by = 0.005,
+  #geno_cycle_length = 0.25, # number of years prediction selection cycle takes
   pred_accuracy_min = 0, # Prediction accuracy that is synonymous with genetic correlation
   pred_accuracy_max = 1, # Prediction accuracy that is synonymous with genetic correlation
   pred_accuracy_by = 0.05,
@@ -792,53 +800,95 @@ try1 <- GainByResponse(
 )
 
 try1_1 <- try1 %>%
+  drop_na() %>%
   group_by(h_pheno, pred_accuracy) %>%
-  mutate(groupID = group_indices()) #%>% 
-  # filter(h_pheno > pred_accuracy) %>% 
-  # filter(pred_accuracy > 0,
-  #        h_pheno > 0) %>% 
-  # filter(groupID == 23 |
-  #          groupID == 44 |
-  #          groupID == 45 |
-  #          groupID == 65 |
-  #          groupID == 66)
+  mutate(groupID = group_indices()) %>%
+  # filter(h_pheno > pred_accuracy) %>%
+  filter(
+    pred_accuracy > 0,
+    h_pheno > 0,
+    h_pheno < 0.02
+  ) # %>%
+# filter(groupID == 23 |
+#          groupID == 44 |
+#          groupID == 45 |
+#          groupID == 65 |
+#          groupID == 66)
 
 p <- ggplot(data = try1_1, aes(
   x = ratio_numbers,
   y = response_ratio,
-  group = factor(groupID),
-  colour = factor(groupID)
+  group = factor(pred_accuracy),
+  colour = factor(pred_accuracy)
 )) +
-  geom_point(alpha = 0.1) +
+   #geom_point(alpha = 0.1) +
   geom_smooth() +
   geom_hline(yintercept = 1, linetype = 2) +
-  scale_color_manual(values = c('#e41a1c','#377eb8','#4daf4a','#984ea3',
-                                '#ff7f00','#ffff33','#a65628','#f781bf',
-                                '#999999'),
-                     name = "Parameters",
-                     breaks = c("23","44","45","65","66"),
-                     labels = c("h = 0.1, acc = 0.05",
-                                "h = 0.15, acc = 0.05",
-                                "h = 0.15, acc = 0.1",
-                                "h = 0.2, acc = 0.05",
-                                "h = 0.2, acc = 0.1")) +
+  #scale_color_manual(
+    # values = c(
+    #   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
+    #   '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
+    #   '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
+    #   '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
+    # ),
+   # name = "Parameters"
+ # ) +
+  facet_wrap(~h_pheno, ncol = 5, scales = "free_y") +
   labs(
     title = "The response ratio when using exclusively prediction or phenotyping",
     x = "phenotyped:predicted",
     y = "correlated_response / direct_response"
   ) #+
-  theme(legend.position = "none")
+theme(legend.position = "none")
 
 p
 
-groupings<- try1_1 %>% 
-  select(h_pheno, pred_accuracy, groupID) %>% 
+groupings <- try1_1 %>%
+  select(h_pheno, pred_accuracy, groupID) %>%
   distinct()
 groupings
 
 ggsave("./Figures/Justification/Response_ratio_Trendlines_predAccuracy.png",
-  width = 40, height = 30,
-  units = "cm", dpi = 2000
+  width = 50, height = 30,
+  units = "cm", dpi = 720
 )
 
+try1_2<- try1 %>% 
+  drop_na() %>%
+  filter(h_pheno > 0.88,
+         h_pheno < 0.92) %>% 
+  group_by(h_pheno, pred_accuracy) %>%
+  mutate(groupID = group_indices()) %>%
+  # filter(h_pheno > pred_accuracy) %>%
+  filter(
+    pred_accuracy > 0,
+    h_pheno > 0,
+    response_ratio < 1000
+  )
 
+q <- ggplot(data = try1_2, aes(
+  x = ratio_numbers,
+  y = response_ratio,
+  group = factor(pred_accuracy),
+  colour = factor(pred_accuracy)
+)) +
+  #geom_point(alpha = 0.5) +
+  geom_smooth() +
+  geom_hline(yintercept = 1, linetype = 2) +
+  #scale_color_manual(
+  # values = c(
+  #   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
+  #   '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
+  #   '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
+  #   '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
+  # ),
+  # name = "Parameters"
+  # ) +
+  #facet_wrap(~h_pheno, ncol = 5, scales = "free_y") +
+  labs(
+    title = "The response ratio when using exclusively prediction or phenotyping",
+    subtitle = paste("Narrow-sense heritability = ", unique(try1_2$h_pheno)),
+    x = "phenotyped:predicted",
+    y = "correlated_response / direct_response"
+  ) 
+q
