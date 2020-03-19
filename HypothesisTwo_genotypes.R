@@ -165,14 +165,14 @@ heterozygosityTest <- genoSelected %>%
          homoDominant = `1` / Total,
          Check = homoRecessive + heterozygous + homoDominant) %>% 
   filter(homoRecessive > 0.05) %>% 
-  filter(heterozygous > homoDominant)
+  filter(heterozygous < homoDominant)
 
 genoSelected<- genoSelected %>% 
   semi_join(heterozygosityTest, by = "snp")
 
 heterozygosityTest %>% 
   ggplot(aes(x = heterozygous)) +
-  geom_histogram(colour = "black", fill = NA, binwidth = 0.001)
+  geom_histogram(colour = "black", fill = NA, binwidth = 0.01)
 
 genoSelected[1:10,1:10]
 

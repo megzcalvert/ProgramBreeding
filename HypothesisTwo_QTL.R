@@ -100,7 +100,7 @@ getwd()
 set.seed(1964)
 # useful infos **reproducible research**
 sessionInfo()
-setwd("/Users/megzcalvert/Dropbox/Research_Poland_Lab/BreedingProgram")
+
 ##### Read in data ####
 geno <- fread("./GenoDatabase/SelectedGeno_Numeric.txt")
 geno[1:10, 1:10]
@@ -123,7 +123,8 @@ snpMatrix <- t(geno[, 4:ncol(geno)])
 
 relMat <- A.mat(snpMatrix)
 
-gwas_Gryld <- GWAS(pheno = pheno, geno = geno, K = relMat, n.PC = 4, P3D = TRUE)
+gwas_Gryld <- GWAS(pheno = pheno, geno = geno, K = relMat, n.PC = 4, 
+                   P3D = TRUE, plot = TRUE)
 
 #### Plot ####
 
@@ -159,6 +160,7 @@ ggplot(don_gwas, aes(x = BPcum, colour = as.factor(don_gwas$chrom))) +
   # custom X axis:
   scale_x_continuous(label = axisdf$chrom, breaks = axisdf$center) +
   scale_y_continuous(expand = c(0, 0.05)) + # remove space between plot area and x axis
+  theme(legend.position = "none") +
   labs(
     title = "GWAS results GRYLD all years",
     subtitle = "Bonferroni corection alpha = 0.05",
@@ -166,31 +168,6 @@ ggplot(don_gwas, aes(x = BPcum, colour = as.factor(don_gwas$chrom))) +
     y = "-log10(P)"
   )
 
-snpOfInterest <- geno %>%
-  filter(snp == "S3D_598169591")
-snpOfInterest <- setDT(as.data.frame(t(snpOfInterest)), keep.rownames = T)
-snpOfInterest <- snpOfInterest %>%
-  rename(
-    S3D_598169591 = V1,
-    Variety = rn
-  )
-
-pheno <- pheno %>%
-  inner_join(snpOfInterest, by = "Variety")
-
-pheno %>%
-  ggplot(aes(x = S3D_598169591, y = GRYLD, colour = S3D_598169591)) +
-  scale_colour_manual(values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e")) +
-  # geom_violin()
-  geom_boxplot() +
-  # geom_point()
-  labs(
-    title = "GRYLD distributions for different SNP states",
-    subtitle = "-1 = homozygous recessive, 0 = heterozygous, 1 = homozygous dominant",
-    x = "SNP state"
-  )
-
-beeswarm::beeswarm(GRYLD ~ S3D_598169591, data = pheno, col = rainbow(3))
 
 heterozygosityTest <- geno %>%
   select(-chrom, -pos) %>%
