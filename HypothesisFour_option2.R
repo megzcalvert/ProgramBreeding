@@ -106,52 +106,132 @@ set.seed(1964)
 # options(scipen = 999)
 # useful infos **reproducible research**
 sessionInfo()
+
 ##############################################################################
 #### Read in data ####
 
 pheno <- fread("./PhenoDatabase/Phenotype_Master.txt")
 glimpse(pheno)
-
-phenoVI_17 <- fread("./PhenoDatabase/PhenoLong_vi17.txt")
-glimpse(phenoVI_17)
-varieties17_VI<- tibble(varietyVI_17 = unique(phenoVI_17$Variety))
-
-phenoVI_18 <- fread("./PhenoDatabase/PhenoVI_18.txt")
-glimpse(phenoVI_18)
-varieties18_VI<- tibble(varietyVI_18 = unique(phenoVI_18$Variety))
+allVarieties <- tibble(Variety = unique(pheno$Variety))
 
 pheno17 <- pheno %>%
   filter(year == "17")
-varieties17_db<- tibble(varietydb_17 = unique(pheno17$Variety))
+varieties17_db <- tibble(varietydb_17 = unique(pheno17$Variety), DB = 1)
+entityID17_db <- tibble(entityIDdb_17 = unique(pheno17$entity_id), DB = 1)
 
 pheno18 <- pheno %>%
-  filter(year == "18") 
-varieties18_db<- tibble(varietydb_18 = unique(pheno18$Variety))
+  filter(year == "18")
+varieties18_db <- tibble(varietydb_18 = unique(pheno18$Variety), DB = 1)
+entityID18_db <- tibble(entityIDdb_18 = unique(pheno18$entity_id), DB = 1)
+
+# VI
+
+fileNames <- list.files(
+  path = "./PhenoDatabase/2016_2017",
+  full.names = T
+)
+
+traitNames <- basename(fileNames) %>%
+  str_remove_all(c("traits_2016-2017_|_no_fills.xlsx|.xlsx"))
+
+load.file <- function(filename) {
+  d <- filename %>%
+    readxl::excel_sheets() %>%
+    purrr::set_names() %>%
+    map(readxl::read_excel, path = filename)
+  d
+}
+
+phenoVI_17 <- lapply(fileNames, load.file)
+
+names(phenoVI_17) <- traitNames
+phenoVI_17 <- plyr::ldply(phenoVI_17, data.frame, .id = "location")
+print(colnames(phenoVI_17))
+
+write.table(phenoVI_17, "./PhenoDatabase/raw_phenoVI_17.txt",
+  quote = F,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+phenoVI_17 <- fread("./PhenoDatabase/raw_phenoVI_17.txt")
+
+phenoVI_17 <- phenoVI_17 %>%
+  rename(entity_id = NDVI.Plot_ID) %>%
+  select(-ends_with("Plot_ID")) %>%
+  pivot_longer(
+    col = `NDVI.42880`:`Height.42894`,
+    names_to = "trait_id",
+    values_to = "phenotype_value"
+  )
+
+phenoVI_17 <- phenoVI_17 %>%
+  separate(trait_id, c("trait_id", "phenotype_date")) %>%
+  mutate(
+    phenotype_date = as.numeric(phenotype_date),
+    phenotype_date = as.Date(phenotype_date, origin = "1899-12-30")
+  ) %>%
+  drop_na(phenotype_value) %>%
+  filter(trait_id != "Height") %>%
+  filter(trait_id != "Green") %>%
+  filter(entity_id != "Fill") %>%
+  filter(str_detect(entity_id, ".YN")) %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  ) %>%
+  select(-location)
+
+str(phenoVI_17)
+
+write.table(phenoVI_17, "./PhenoDatabase/Pheno_vi17.txt",
+  quote = FALSE, sep = "\t", row.names = FALSE, col.names = T
+)
+phenoVI_17 <- fread("./PhenoDatabase/Pheno_vi17.txt")
+
+entityID17_VI <- tibble(entityIDVI_17 = unique(phenoVI_17$entity_id), VI = 1)
+
+phenoVI_18 <- fread("./PhenoDatabase/PhenoVI_18.txt")
+glimpse(phenoVI_18)
+
+varieties18_VI <- tibble(varietyVI_18 = unique(phenoVI_18$Variety), VI = 1)
+entityID18_VI <- tibble(entityIDVI_18 = unique(phenoVI_18$entity_id), VI = 1)
 
 ## Name comparison between db and VI information
 
-varieties17<- varieties17_db %>% 
-  left_join(varieties17_VI, by = c("varietydb_17" = "varietyVI_17"))
-varieties18<- varieties18_db %>% 
-  left_join(varieties18_VI, by = c("varietydb_18" = "varietyVI_18"))
+varieties18 <- varieties18_db %>%
+  left_join(varieties18_VI, by = c("varietydb_18" = "varietyVI_18")) %>%
+  mutate(
+    Total = DB + VI,
+    Total = replace_na(Total, 99)
+  )
+
+entityID17 <- entityID17_db %>%
+  left_join(entityID17_VI, by = c("entityIDdb_17" = "entityIDVI_17")) %>%
+  mutate(
+    Total = DB + VI,
+    Total = replace_na(Total, 99)
+  )
+
+entityID18 <- entityID18_db %>%
+  left_join(entityID18_VI, by = c("entityIDdb_18" = "entityIDVI_18")) %>%
+  mutate(
+    Total = DB + VI,
+    Total = replace_na(Total, 99)
+  )
 
 # Variety names seem to match. Problem may be coming from different entity_id
-# or possibly wrong field information. 
-
-phenoVI_17 <- phenoVI_17 %>%
-  filter(trait_id != "GRYLD") %>%
-  select(entity_id, trait_id, phenotypic_value) %>%
-  pivot_wider(
-    names_from = trait_id,
-    values_from = phenotypic_value
-  )
+# or possibly wrong field information.
 
 missing17_pheno <- pheno17 %>%
   anti_join(phenoVI_17)
 missing17_vi <- phenoVI_17 %>%
   anti_join(pheno17)
 
+colnames(pheno17)
+colnames(phenoVI_17)
+
 pheno17 <- pheno17 %>%
+  filter(trait_id != "PTHT") %>%
   inner_join(phenoVI_17, by = c("entity_id")) %>%
   pivot_wider(
     names_from = trait_id,
@@ -182,7 +262,14 @@ phenoVI_18 <- phenoVI_18 %>%
   filter(trait_id != "GRYLD") %>%
   filter(trait_id != "PTHT") %>%
   unite("trait_id", trait_id, phenotype_date) %>%
-  select(entity_id, trait_id, phenotype_value) %>%
+  rename(
+    location = Location,
+    entity_id_VI = entity_id
+  ) %>%
+  select(
+    entity_id_VI, location, range, column,
+    Variety, trait_id, phenotype_value
+  ) %>%
   pivot_wider(
     names_from = trait_id,
     values_from = phenotype_value
@@ -194,7 +281,8 @@ missing18_vi <- phenoVI_18 %>%
   anti_join(pheno18)
 
 pheno18 <- pheno18 %>%
-  inner_join(phenoVI_18, by = c("entity_id")) %>%
+  filter(trait_id != "PTHT") %>%
+  inner_join(phenoVI_18, by = c("location", "range", "column", "Variety")) %>%
   pivot_wider(
     names_from = trait_id,
     values_from = phenotype_value
@@ -218,8 +306,6 @@ pheno18 <- pheno18 %>%
     block = as.factor(block),
     rep = as.factor(rep)
   )
-
-
 
 #### Trait Summaries ####
 traitSummary17 <- pheno17 %>%
@@ -266,9 +352,11 @@ dateLocationSummary_17 <- distinct(pheno17, Date, location)
 
 pheno17_ayn <- pheno17 %>%
   filter(Trial == "AYN")
+varieties17_ayn <- tibble(Variety = unique(pheno17_ayn$Variety))
 
 pheno17_pyn <- pheno17 %>%
   filter(Trial == "PYN")
+varieties17_pyn <- tibble(Variety = unique(pheno17_pyn$Variety))
 
 pheno18 <- pheno18 %>%
   separate(col = trait_ID, into = c("trait_ID", "Date"), sep = "_") %>%
@@ -279,9 +367,11 @@ dateLocationSummary_18 <- distinct(pheno18, Date, location)
 
 pheno18_ayn <- pheno18 %>%
   filter(Trial == "AYN")
+varieties18_ayn <- tibble(Variety = unique(pheno18_ayn$Variety))
 
 pheno18_pyn <- pheno18 %>%
   filter(Trial == "PYN")
+varieties18_pyn <- tibble(Variety = unique(pheno18_pyn$Variety))
 
 pheno18_pyn %>%
   filter(trait_ID != "GRYLD") %>%
@@ -324,10 +414,10 @@ pheno17_ayn <- pheno17_ayn %>%
   ) %>%
   unite("ID", group, ID, sep = "_")
 
-keyData_17 <- pheno17_ayn %>%
+keyData_ayn_17 <- pheno17_ayn %>%
   select(trait_ID, ID) %>%
   distinct()
-keyData_17
+keyData_ayn_17
 
 pheno17_ayn <- pheno17_ayn %>%
   pivot_wider(names_from = ID, values_from = phenotype_value)
@@ -370,7 +460,7 @@ calcH2r <- function(dat, fill = NA, ...) {
 ayn_17 <- calcH2r(dat = pheno17_ayn)
 
 ayn_17 <- ayn_17 %>%
-  inner_join(keyData_17, by = c("Trait" = "ID")) %>%
+  left_join(keyData_ayn_17, by = c("Trait" = "ID")) %>%
   select(trait_ID, -Trait, everything()) %>%
   separate(trait_ID, c("trait_ID", "Date", "location"), sep = "_") %>%
   mutate(Date = as.Date(Date, format = "%Y-%m-%d"))
@@ -384,23 +474,24 @@ pheno18_ayn <- pheno18_ayn %>%
   ) %>%
   unite("ID", group, ID, sep = "_")
 
-keyData_18 <- pheno18_ayn %>%
+keyData_ayn_18 <- pheno18_ayn %>%
   select(trait_ID, ID) %>%
   distinct()
-keyData_18
+keyData_ayn_18
 
 pheno18_ayn <- pheno18_ayn %>%
-  pivot_wider(names_from = ID, values_from = phenotype_value)
+  pivot_wider(names_from = ID, values_from = phenotype_value) %>%
+  select(-entity_id_VI)
 
 ayn_18 <- calcH2r(dat = pheno18_ayn)
 
 ayn_18 <- ayn_18 %>%
-  inner_join(keyData_18, by = c("Trait" = "ID")) %>%
+  left_join(keyData_ayn_18, by = c("Trait" = "ID")) %>%
   select(trait_ID, -Trait, everything()) %>%
   separate(trait_ID, c("trait_ID", "Date", "location"), sep = "_") %>%
   mutate(Date = as.Date(Date, format = "%Y-%m-%d"))
 
-ayn_18 %>%
+ayn_17 %>%
   filter(trait_ID != "GRYLD") %>%
   ggplot(aes(x = Date, y = H, colour = as.factor(location))) +
   geom_point() +
@@ -409,7 +500,7 @@ ayn_18 %>%
     name = "Location"
   ) +
   facet_wrap(~trait_ID, scales = "free") +
-  labs(title = "Heritability for 2018 AYN ")
+  labs(title = "Heritability for 2017 AYN ")
 
 write.table(ayn_17, "./Results/H2_ayn_2017.txt",
   quote = FALSE,
@@ -459,8 +550,6 @@ plot(fit)
 blups <- setDT(as.data.frame(coef(fit)$random), keep.rownames = T)
 blups$rn <- str_remove(blups$rn, "Variety_")
 colnames(blups)[colnames(blups) == "rn"] <- "Variety"
-blups <- blups %>%
-  select(-effect)
 
 # As a function
 pyn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
@@ -479,7 +568,7 @@ pyn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
 
     data <- cbind(fieldInfo, dat[, paste(i)])
     names(data) <- c("Variety", "rep", "block", "column", "Trait")
-    data <- data %>% 
+    data <- data %>%
       drop_na(Trait)
 
     t_fit <- asreml(
@@ -498,8 +587,8 @@ pyn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
     colnames(blups)[colnames(blups) == "rn"] <- "Variety"
     colnames(blups)[colnames(blups) == "effect"] <- paste(i)
 
-    joinFile <- blups %>%
-      inner_join(joinFile, by = "Variety")
+    joinFile <- joinFile %>%
+      tidylog::left_join(blups, by = "Variety")
     graphics.off()
   }
   return(joinFile)
@@ -507,7 +596,7 @@ pyn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
 
 blups17_pyn <- pyn_blups_2017(
   dat = pheno17_pyn,
-  joinFile = blups,
+  joinFile = allVarieties,
   saveFile = "./Figures/AsremlPlots/BLUPs/season2017/"
 )
 
@@ -517,13 +606,16 @@ blups17_pyn <- blups17_pyn %>%
     names_to = "ID",
     values_to = "phenotype_value"
   ) %>%
-  inner_join(keyData_17, by = "ID") %>%
+  left_join(keyData_17, by = "ID") %>%
   select(Variety, trait_ID, phenotype_value) %>%
   separate(trait_ID,
     c("trait_id", "phenotype_date", "location"),
     sep = "_"
   ) %>%
-  filter(!str_detect(Variety, "block"))
+  filter(!str_detect(Variety, "block")) %>% 
+  drop_na(phenotype_value)
+
+varieties17_pynBlups <- tibble(Variety = unique(blups17_pyn$Variety))
 
 # Ayn
 
@@ -539,8 +631,6 @@ plot(fit)
 blups <- setDT(as.data.frame(coef(fit)$random), keep.rownames = T)
 blups$rn <- str_remove(blups$rn, "Variety_")
 colnames(blups)[colnames(blups) == "rn"] <- "Variety"
-blups <- blups %>%
-  select(-effect)
 
 # As a function
 ayn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
@@ -560,7 +650,7 @@ ayn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
 
     data <- cbind(fieldInfo, dat[, paste(i)])
     names(data) <- c("Variety", "rep", "block", "column", "Trait")
-    data <- data %>% 
+    data <- data %>%
       drop_na(Trait)
 
     t_fit <- asreml(
@@ -579,8 +669,8 @@ ayn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
     colnames(blups)[colnames(blups) == "rn"] <- "Variety"
     colnames(blups)[colnames(blups) == "effect"] <- paste(i)
 
-    joinFile <- blups %>%
-      inner_join(joinFile, by = "Variety")
+    joinFile <- joinFile %>%
+      tidylog::left_join(blups, by = "Variety")
     graphics.off()
   }
   return(joinFile)
@@ -588,9 +678,11 @@ ayn_blups_2017 <- function(dat, joinFile, saveFile, ...) {
 
 blups17_ayn <- ayn_blups_2017(
   dat = pheno17_ayn,
-  joinFile = blups,
+  joinFile = allVarieties,
   saveFile = "./Figures/AsremlPlots/BLUPs/season2017/"
 )
+
+varieties17_aynBlups <- tibble(Variety = unique(blups17_ayn$Variety))
 
 blups17_ayn <- blups17_ayn %>%
   pivot_longer(
@@ -598,13 +690,16 @@ blups17_ayn <- blups17_ayn %>%
     names_to = "ID",
     values_to = "phenotype_value"
   ) %>%
-  inner_join(keyData_17, by = "ID") %>%
+  left_join(keyData_ayn_17, by = "ID") %>%
   select(Variety, trait_ID, phenotype_value) %>%
   separate(trait_ID,
     c("trait_id", "phenotype_date", "location"),
     sep = "_"
   ) %>%
-  filter(!str_detect(Variety, "rep"))
+  filter(!str_detect(Variety, "rep")) %>% 
+  drop_na(phenotype_value)
+
+varieties17_aynBlups <- tibble(Variety = unique(blups17_ayn$Variety))
 
 blups17_pyn <- blups17_pyn %>%
   mutate(
@@ -612,7 +707,8 @@ blups17_pyn <- blups17_pyn %>%
     phenotype_date = replace_na(
       phenotype_date, as.Date("2017-06-10")
     )
-  )
+  ) %>% 
+  drop_na(phenotype_value)
 
 blups17_ayn <- blups17_ayn %>%
   mutate(
@@ -620,7 +716,8 @@ blups17_ayn <- blups17_ayn %>%
     phenotype_date = replace_na(
       phenotype_date, as.Date("2017-06-10")
     )
-  )
+  ) %>% 
+  drop_na(phenotype_value)
 
 write.table(blups17_pyn, "./Results/Blups_pyn_17.txt",
   quote = FALSE,
@@ -652,7 +749,8 @@ keyData_18
 
 pheno18_pyn <- pheno18_pyn %>%
   pivot_wider(names_from = ID, values_from = phenotype_value) %>%
-  ungroup()
+  ungroup() %>%
+  select(-entity_id_VI)
 
 fit <- asreml(
   fixed = group_1 ~ 1,
@@ -664,8 +762,6 @@ plot(fit)
 blups <- setDT(as.data.frame(coef(fit)$random), keep.rownames = T)
 blups$rn <- str_remove(blups$rn, "Variety_")
 colnames(blups)[colnames(blups) == "rn"] <- "Variety"
-blups <- blups %>%
-  select(-effect)
 
 # As a function
 pyn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
@@ -684,7 +780,7 @@ pyn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
 
     data <- cbind(fieldInfo, dat[, paste(i)])
     names(data) <- c("Variety", "rep", "block", "column", "Trait")
-    data <- data %>% 
+    data <- data %>%
       drop_na(Trait)
 
     t_fit <- asreml(
@@ -703,8 +799,8 @@ pyn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
     colnames(blups)[colnames(blups) == "rn"] <- "Variety"
     colnames(blups)[colnames(blups) == "effect"] <- paste(i)
 
-    joinFile <- blups %>%
-      inner_join(joinFile, by = "Variety")
+    joinFile <- joinFile %>%
+      tidylog::left_join(blups, by = "Variety")
     graphics.off()
   }
   return(joinFile)
@@ -712,7 +808,7 @@ pyn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
 
 blups18_pyn <- pyn_blups_2018(
   dat = pheno18_pyn,
-  joinFile = blups,
+  joinFile = allVarieties,
   saveFile = "./Figures/AsremlPlots/BLUPs/season2018/"
 )
 
@@ -722,13 +818,14 @@ blups18_pyn <- blups18_pyn %>%
     names_to = "ID",
     values_to = "phenotype_value"
   ) %>%
-  inner_join(keyData_18, by = "ID") %>%
+ left_join(keyData_18, by = "ID") %>%
   select(Variety, trait_ID, phenotype_value) %>%
   separate(trait_ID,
     c("trait_id", "phenotype_date", "location"),
     sep = "_"
   ) %>%
-  filter(!str_detect(Variety, "block"))
+  filter(!str_detect(Variety, "block")) %>% 
+  drop_na(phenotype_value)
 
 # Ayn
 
@@ -744,8 +841,6 @@ plot(fit)
 blups <- setDT(as.data.frame(coef(fit)$random), keep.rownames = T)
 blups$rn <- str_remove(blups$rn, "Variety_")
 colnames(blups)[colnames(blups) == "rn"] <- "Variety"
-blups <- blups %>%
-  select(-effect)
 
 # As a function
 ayn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
@@ -765,7 +860,7 @@ ayn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
 
     data <- cbind(fieldInfo, dat[, paste(i)])
     names(data) <- c("Variety", "rep", "block", "column", "Trait")
-    data <- data %>% 
+    data <- data %>%
       drop_na(Trait)
 
     t_fit <- asreml(
@@ -784,8 +879,8 @@ ayn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
     colnames(blups)[colnames(blups) == "rn"] <- "Variety"
     colnames(blups)[colnames(blups) == "effect"] <- paste(i)
 
-    joinFile <- blups %>%
-      inner_join(joinFile, by = "Variety")
+    joinFile <- joinFile %>%
+      tidylog::left_join(blups)
     graphics.off()
   }
   return(joinFile)
@@ -793,7 +888,7 @@ ayn_blups_2018 <- function(dat, joinFile, saveFile, ...) {
 
 blups18_ayn <- ayn_blups_2018(
   dat = pheno17_ayn,
-  joinFile = blups,
+  joinFile = allVarieties,
   saveFile = "./Figures/AsremlPlots/BLUPs/season2018/"
 )
 
@@ -803,13 +898,14 @@ blups18_ayn <- blups18_ayn %>%
     names_to = "ID",
     values_to = "phenotype_value"
   ) %>%
-  inner_join(keyData_18, by = "ID") %>%
+  left_join(keyData_ayn_18, by = "ID") %>%
   select(Variety, trait_ID, phenotype_value) %>%
   separate(trait_ID,
     c("trait_id", "phenotype_date", "location"),
     sep = "_"
   ) %>%
-  filter(!str_detect(Variety, "rep"))
+  filter(!str_detect(Variety, "rep")) %>% 
+  drop_na(phenotype_value)
 
 blups18_pyn <- blups18_pyn %>%
   mutate(
@@ -817,7 +913,8 @@ blups18_pyn <- blups18_pyn %>%
     phenotype_date = replace_na(
       phenotype_date, as.Date("2018-06-15")
     )
-  )
+  ) %>% 
+  drop_na(phenotype_value)
 
 blups18_ayn <- blups18_ayn %>%
   mutate(
@@ -825,7 +922,8 @@ blups18_ayn <- blups18_ayn %>%
     phenotype_date = replace_na(
       phenotype_date, as.Date("2018-06-15")
     )
-  )
+  ) %>% 
+  drop_na(phenotype_value)
 
 write.table(blups18_pyn, "./Results/Blups_pyn_18.txt",
   quote = FALSE,
@@ -836,3 +934,30 @@ write.table(blups18_ayn, "./Results/Blups_ayn_18.txt",
   sep = "\t", row.names = FALSE, col.names = TRUE
 )
 ###############################################################################
+blups17_ayn <- fread("./Results/Blups_ayn_17.txt")
+blups17_pyn <- fread("./Results/Blups_pyn_17.txt")
+
+blups18_ayn <- fread("./Results/Blups_ayn_18.txt")
+blups18_pyn <- fread("./Results/Blups_pyn_18.txt")
+
+blups18_pyn %>%
+  filter(trait_id != "GRYLD") %>% 
+  ggplot(aes(
+    x = as.Date(phenotype_date, format = "%Y-%m-%d"),
+    y = phenotype_value,
+    colour = location
+  )) +
+  ggbeeswarm::geom_quasirandom(
+    dodge.width = 1, varwidth = TRUE,
+    alpha = 0.5, size = 1
+  ) +
+  facet_wrap(~trait_id, scales = "free") +
+  scale_x_date(
+    date_labels = "%m/%d",
+    date_breaks = "21 days"
+  ) +
+  labs(
+    title = "Distribution of Vegetation Indices BLUPs over season",
+    subtitle = "2016-2017 Season, Preliminary Yield Nursery",
+    x = "Date"
+  )

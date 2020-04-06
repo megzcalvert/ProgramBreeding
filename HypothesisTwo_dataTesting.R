@@ -99,7 +99,7 @@ theme_set(custom_theme)
 
 getwd()
 set.seed(1964)
-options(scipen=999)
+options(scipen = 999)
 # useful infos **reproducible research**
 sessionInfo()
 
@@ -157,18 +157,23 @@ write.table(varietyNames, "./PhenoDatabase/VarietyNames_Database.txt",
 )
 
 #### Need to fix some of the names in a text editor because
-# they are str components
+# they are str components: ^, ~, +
+
 write.table(pheno_long, "./PhenoDatabase/PhenoLong.txt",
   quote = FALSE,
   sep = "\t", row.names = FALSE, col.names = TRUE
 )
+
 pheno_long <- fread("./PhenoDatabase/PhenoLong.txt", fill = TRUE)
 
 pheno_long <- pheno_long %>%
   mutate(Variety = str_replace(Variety, "-M-", "M-")) %>%
   mutate(Variety = str_replace(Variety, "-K-", "K-")) %>%
-  mutate(Variety = tolower(Variety)) %>% 
-  mutate(Variety = str_replace(Variety, "-", "_"))
+  mutate(Variety = tolower(Variety)) %>%
+  mutate(Variety = str_replace(Variety, "-", "_")) %>% 
+  mutate(Variety = str_replace(Variety, "wb_4458", "wb4458")) %>% 
+  mutate(Variety = str_replace(Variety, "symonument", "monument")) %>% 
+  mutate(Variety = str_replace(Variety, "smith'sgold", "smithsgold")) 
 
 varietyNames_2 <- tabyl(pheno_long$Variety)
 names(varietyNames_2)[1:2] <- c("Variety", "Count")
@@ -302,32 +307,32 @@ fit_2 <- lmer(
 
 fit_3 <- lmer(
   phenotype_value ~ (1 | Variety) + (1 | year) + (1 | location) + (1 | treated)
-  + (1 | year:location),
+    + (1 | year:location),
   data = pheno_long
 )
 
 fit_4 <- lmer(
   phenotype_value ~ (1 | Variety) + (1 | year) + (1 | location) + (1 | treated)
-  + (1 | year:location) + (1 | year:location:Variety),
+    + (1 | year:location) + (1 | year:location:Variety),
   data = pheno_long
 )
 
 fit_5 <- lmer(
   phenotype_value ~ (1 | Variety) + (1 | year) + (1 | location) + (1 | treated)
-  + (1 | year:location) + (1 | year:location:Variety)
-  + (1 | year:location:rep),
+    + (1 | year:location) + (1 | year:location:Variety)
+    + (1 | year:location:rep),
   data = pheno_long
 )
 
 fit_6 <- lmer(
   phenotype_value ~ (1 | Variety) + (1 | year) + (1 | location) + (1 | treated)
-  + (1 | year:location) + (1 | year:location:Variety)
-  + (1 | year:location:rep) + (1 | year:location:treated),
+    + (1 | year:location) + (1 | year:location:Variety)
+    + (1 | year:location:rep) + (1 | year:location:treated),
   data = pheno_long
 )
 
-anova(fit_1,fit_2,fit_3,fit_4,fit_5,fit_6)
-tidy(anova(fit_1,fit_2,fit_3,fit_4,fit_5,fit_6))
+anova(fit_1, fit_2, fit_3, fit_4, fit_5, fit_6)
+tidy(anova(fit_1, fit_2, fit_3, fit_4, fit_5, fit_6))
 
 summary(fit_1)
 summary(fit_2)
@@ -351,17 +356,23 @@ plot(fit_5, type = c("p", "smooth"))
 plot(fit_6, type = c("p", "smooth"))
 
 plot(fit_1, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 plot(fit_2, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 plot(fit_3, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 plot(fit_4, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 plot(fit_5, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 plot(fit_6, sqrt(abs(resid(.))) ~ fitted(.),
-     type = c("p", "smooth"))
+  type = c("p", "smooth")
+)
 
 pheno_long %>%
   ggplot(aes(x = phenotype_value, colour = location)) +
@@ -373,27 +384,30 @@ pheno_long %>%
   geom_density(fill = NA) +
   facet_wrap(Trial ~ year)
 
-values<- setDT(as.data.frame(ranef(fit_6)$Variety), keep.rownames = TRUE) %>% 
-  rename(GRYLD = `(Intercept)`,
-         Variety = rn)
+values <- setDT(as.data.frame(ranef(fit_6)$Variety), keep.rownames = TRUE) %>%
+  rename(
+    GRYLD = `(Intercept)`,
+    Variety = rn
+  )
 
-values %>% 
+values %>%
   ggplot(aes(x = GRYLD)) +
   geom_density(fill = NA)
 
-write.table(values, "./PhenoDatabase/Blups_allYrs_allVarieties.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+write.table(values, "./PhenoDatabase/BlupsGRYLD_allYrs_allVarieties.txt",
+  quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE
+)
 
-varianceComponents<- as.data.frame(VarCorr(fit_6))
+varianceComponents <- as.data.frame(VarCorr(fit_6))
 varianceComponents
 
-h_gryld<- varianceComponents[2,4] / (varianceComponents[2,4] + 
-                                       (varianceComponents[9,4] / 
-                                          psych::harmonic.mean(as.numeric(pheno_long$rep)) * 
-                                          length(unique(pheno_long$year)) *
-                                          length(unique(pheno_long$location))) +
-                                       (varianceComponents[1,4] / 
-                                          length(unique(pheno_long$year)) *
-                                          length(unique(pheno_long$location))))
+h_gryld <- varianceComponents[2, 4] / (varianceComponents[2, 4] +
+  (varianceComponents[9, 4] /
+    psych::harmonic.mean(as.numeric(pheno_long$rep)) *
+    length(unique(pheno_long$year)) *
+    length(unique(pheno_long$location))) +
+  (varianceComponents[1, 4] /
+    length(unique(pheno_long$year)) *
+    length(unique(pheno_long$location))))
 h_gryld
 

@@ -111,7 +111,7 @@ hapgeno[hapgeno == 0.5] <- 0
 geno <- bind_cols(geno[, 1:3], hapgeno)
 geno[1:10, 1:10]
 
-pheno <- fread("./PhenoDatabase/Blups_allYrs_allVarieties.txt")
+pheno <- fread("./PhenoDatabase/BlupsGRYLD_allYrs_allVarieties.txt")
 pheno[1:10, ]
 
 genoVarieties <- as.data.frame(colnames(geno[, 4:ncol(geno)]))

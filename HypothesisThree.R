@@ -205,7 +205,7 @@ set.seed(1642)
 # )
 # colMeans(accuracy17)
 
-accuracy<- fread("./BeocatScripts/GenomicSelection_80_100_accuracy_allyrs.txt")
+accuracy<- fread("./BeocatScripts/GenomicSelectionR_80_100_accuracy_allyrs.txt")
 
 accuracy %>% 
   ggplot(aes(V1)) + 
