@@ -4,9 +4,11 @@ ls()
 library(tidyverse)
 library(data.table)
 library(tidylog)
-library(janitor)
 library(broom)
 library(reshape2)
+library(corrplot)
+library(stringr)
+library(vcfR)
 
 #### Theme set ####
 custom_theme <- theme_minimal() %+replace%
@@ -102,105 +104,190 @@ set.seed(1964)
 sessionInfo()
 
 ######### Reading in files as a list of data frames
-
+# 
 varietyNames <- fread("./PhenoDatabase/VarietyNames_Corrected.txt")
-varietyNames<- varietyNames %>% 
+varietyNames <- varietyNames %>%
   select(Variety)
-
+# 
 write.table(varietyNames, "./GenoDatabase/MasterBreeding/varietiesSelected.txt",
   quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE
 )
 
-geno <- fread("./GenoDatabase/MasterBreeding/Numeric_output.txt")
+## Key file
+keyfile<- fread("./GenoDatabase/MasterBreedingProgram.txt")
 
-geno[1:10,1:10]
+keyfile<- keyfile %>% 
+  mutate(Variety = str_replace(Variety, "-M-", "M-")) %>%
+  mutate(Variety = str_replace(Variety, "-K-", "K-")) %>%
+  mutate(Variety = tolower(Variety)) %>%
+  mutate(Variety = str_squish(Variety)) %>%
+  mutate(Variety = str_replace(Variety, "-", "_")) %>%
+  mutate(Variety = str_replace(Variety, "wb_4458", "wb4458")) %>%
+  mutate(Variety = str_replace(Variety, "symonument", "monument")) %>%
+  mutate(Variety = str_replace(Variety, "smith'sgold", "smithsgold")) %>% 
+  semi_join(varietyNames)
 
-geno<- geno %>% 
-  rename(Variety = `<Marker>`) %>% 
-  mutate(Variety = tolower(Variety)) %>% 
-  mutate(Variety = str_remove_all(Variety," ")) 
+write.table(keyfile, "./GenoDatabase/HypothesisTwo/KeyFile_BP.txt",
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+#### Numeric output ####
+geno <- fread("./GenoDatabase/HypothesisTwo/numericImputed.txt")
+# 
+geno[1:10, 1:10]
+# 
+geno <- geno %>%
+  rename(Variety = `<Marker>`) %>%
+  mutate(Variety = tolower(Variety)) %>%
+  mutate(Variety = str_remove_all(Variety, " ")) %>% 
+  dplyr::arrange(Variety)
+ 
+geno[1:10, 1:10]
+ 
+genoSelected <- geno %>%
+  semi_join(varietyNames, by = "Variety") %>% 
+  arrange(Variety)
 
-geno[1:10,1:10]
+genoMissing <- varietyNames %>% 
+  anti_join(geno, by = "Variety")
 
-genoSelected<- geno %>% 
-  semi_join(varietyNames, by = "Variety")
-
-genoSelected[1:10,1:10]
+phenoMissing<- geno %>% 
+  anti_join(varietyNames, by = "Variety")
+  
+genoSelected[1:10, 1:10]
 
 rm(geno)
 
-positions<- fread("./GenoDatabase/MasterBreeding/Merged_Genotype_Table.hmp.txt",
-                  select = c(1:4))
-
-positions<- positions %>% 
-  rename(snp = `rs#`) %>% 
+positions <- fread("./GenoDatabase/HypothesisTwo/HapMapFormat.hmp.txt",
+  select = c(1:4)
+)
+# 
+positions <- positions %>%
+  rename(snp = `rs#`) %>%
   select(-alleles)
+# 
+genoSelected <- genoSelected %>%
+  distinct(Variety, .keep_all = TRUE) %>% 
+  arrange(Variety)
+# 
+genoSelected <- t(genoSelected)
+genoSelected <- setDT(as.data.frame(genoSelected), keep.rownames = TRUE)
+genoSelected[1:10,1:10]
 
-genoSelected<- genoSelected %>% 
-  distinct(Variety, .keep_all = TRUE) 
+write.table(genoSelected, "./GenoDatabase/HypothesisTwo/SelectedGeno_Numeric2.txt",
+  quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE
+)
 
-genoSelected<- t(genoSelected)  
-genoSelected<- setDT(as.data.frame(genoSelected), keep.rownames = TRUE) 
-
-write.table(genoSelected, "./GenoDatabase/MasterBreeding/SelectedGeno_Numeric2.txt",
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
-
-genoSelected<- fread("./GenoDatabase/MasterBreeding/SelectedGeno_Numeric2.txt")
+genoSelected <- fread("./GenoDatabase/HypothesisTwo/SelectedGeno_Numeric2.txt")
 
 colnames(genoSelected)[1] <- "snp"
 
-genoSelected<- genoSelected %>% 
-  inner_join(positions, by = "snp") %>% 
+genoSelected[genoSelected == 0] <- -1
+genoSelected[genoSelected == 0.5] <- 0
+
+genoSelected <- genoSelected %>%
+  inner_join(positions, by = "snp") %>%
   select(snp, chrom, pos, everything())
 
-heterozygosityTest <- genoSelected %>%
-  select(-chrom, -pos) %>%
-  pivot_longer(cols = -snp, names_to = "Variety") %>%
-  group_by(snp, value) %>%
-  summarise(count = n()) %>%
-  pivot_wider(names_from = value, values_from = count) %>%
-  mutate(Total = `0` + `0.5` + `1`,
-         homoRecessive = `0` / Total,
-         heterozygous = `0.5` / Total,
-         homoDominant = `1` / Total,
-         Check = homoRecessive + heterozygous + homoDominant) %>% 
-  filter(homoRecessive > 0.05) %>% 
-  filter(heterozygous < homoDominant)
+rm(positions)
 
-genoSelected<- genoSelected %>% 
-  semi_join(heterozygosityTest, by = "snp")
-
-heterozygosityTest %>% 
-  ggplot(aes(x = heterozygous)) +
-  geom_histogram(colour = "black", fill = NA, binwidth = 0.01)
-
-genoSelected[1:10,1:10]
-
-write.table(genoSelected, 
-            "./GenoDatabase/SelectedGeno_Numeric.txt", 
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
-
-genoSelected<- fread("./GenoDatabase/SelectedGeno_Numeric.txt")
-
+genoSelected[1:10, 1:10]
+# 
+snpNames<- genoSelected[,1]
+# 
+write.table(genoSelected,
+  "./GenoDatabase/SelectedGeno_Numeric.txt",
+  quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE
+)
+# 
+genoSelected <- fread("./GenoDatabase/SelectedGeno_Numeric.txt")
+# 
 str(genoSelected)
-
+# 
+positions<- genoSelected[,c(1,2,3)]
+# 
 snpMatrix <- t(genoSelected[, c(-1, -2, -3)])
-
+# 
 pcaMethods::checkData(snpMatrix) # Check PCA assumptions
-
+#
 pcaAM <- pcaMethods::pca(snpMatrix, nPcs = 5) # SVD PCA
-
+# 
 sumPCA <- as.data.frame(summary(pcaAM))
-
+# #
 Scores <- as.data.frame(pcaMethods::scores(pcaAM))
 Scores <- setDT(Scores, keep.rownames = TRUE) %>%
   mutate(founders = if_else(
-    rn %in% c("everest", "kanmark", "joe", "wb4458", "zenda", "danby",
-              "bobdole", "gallagher", "monument"), "yes", "no"
+    rn %in% c(
+      "everest", "kanmark", "joe", "wb4458", "zenda", "danby",
+      "bobdole", "gallagher", "monument", "wb_cedar"
+    ), "yes", "no"
   ))
-
+# 
 p <- Scores %>%
-  ggplot(aes(x = PC1, y = PC2)) +
+  ggplot(aes(x = PC1, y = PC3)) +
   geom_point() +
-  gghighlight::gghighlight(founders == "yes", label_key = rn)
+  gghighlight::gghighlight(founders == "yes", label_key = rn) +
+  theme(aspect.ratio = 1) +
+  labs(x = paste0("PC1 = ", sumPCA["R2","PC1"] * 100, "%"),
+       y = paste0("PC3 = ", sumPCA["R2","PC3"] * 100, "%"))
 p
+ggsave("./Figures/PCA_2.png",
+       height = 25,
+       width = 25, units = "cm", dpi = 350
+)
+# 
+# snpMatrix[1:10,1:10]
+# colnames(snpMatrix)<- snpNames
+# snpMatrix[1:10,1:10]
+# # 
+# Linkage<- cor(snpMatrix)
+# 
+# Linkage[1:5,1:5]
+# 
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+# flattenCorrMatrix <- function(cormat) {
+#   ut <- upper.tri(cormat)
+#   data.frame(
+#     row = rownames(cormat)[row(cormat)[ut]],
+#     column = rownames(cormat)[col(cormat)[ut]],
+#     cor  =(cormat)[ut]
+#   )
+# }
+# 
+# Linkage<- flattenCorrMatrix(cormat = Linkage)
+# 
+# Linkage[1:5,]
+# 
+# Linkage<- Linkage %>%
+#  inner_join(positions, by = c("row" = "snp")) %>%
+#   rename(chromRow = chrom,
+#          posRow = pos) %>%
+#   inner_join(positions, by = c("column" = "snp")) %>%
+#   rename(chromCol = chrom,
+#          posCol = pos) %>%
+#   filter(chromRow == chromCol)
+# 
+# Linkage[1:5,]
+# 
+# write.table(Linkage, file = "./Results/snpCorrelations.txt", quote = FALSE,
+#             sep = "\t", row.names = FALSE, col.names = TRUE)
+
+snpCor<- fread("./Results/snpCorrelations.txt")
+
+snpCor<- snpCor %>% 
+  mutate(distance = abs(posRow - posCol) / 1000000,
+         absoluteCor = abs(cor))
+
+pdf("./Figures/absCorAbsDistance.pdf",
+    width = 15, 
+    height = 10)
+
+snpCor %>% 
+  ggplot(aes(x = distance, y = absoluteCor)) +
+  geom_smooth() +
+  labs(title = "Linkage disequilibrium for KSU Breeding Program",
+       x = "Distance (Mb)")
+
+

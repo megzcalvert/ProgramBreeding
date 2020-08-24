@@ -1,0 +1,221 @@
+rm(list = objects())
+ls()
+
+library(tidyverse)
+library(data.table)
+library(tidylog)
+library(janitor)
+library(broom)
+library(reshape2)
+library(rrBLUP)
+
+#### Theme set ####
+custom_theme <- theme_minimal() %+replace%
+  theme(
+    axis.title = element_text(
+      colour = "black",
+      size = rel(2)
+    ),
+    axis.title.x = element_text(
+      vjust = 0,
+      margin = margin(
+        t = 0, r = 0.25,
+        b = 0, l = 0,
+        unit = "cm"
+      )
+    ),
+    axis.title.y = element_text(
+      vjust = 1,
+      angle = 90,
+      margin = margin(
+        t = 0, r = 0.25,
+        b = 0, l = 0.1,
+        unit = "cm"
+      )
+    ),
+    axis.text = element_text(
+      colour = "black",
+      size = rel(1.5)
+    ),
+    axis.ticks = element_line(colour = "black"),
+    axis.ticks.length = unit(3, "pt"),
+    axis.line = element_line(
+      color = "black",
+      size = 0.5
+    ),
+    legend.key.size = unit(2, "lines"),
+    # legend.background = element_rect(fill = NULL, colour = NULL),
+    # legend.box = NULL,
+    legend.margin = margin(
+      t = 0, r = 0.75,
+      b = 0, l = 0.75,
+      unit = "cm"
+    ),
+    legend.text = element_text(size = rel(2)),
+    legend.title = element_text(size = rel(1.5)),
+    panel.grid.major = element_line(
+      colour = "#969696",
+      linetype = 3
+    ),
+    panel.grid.minor = element_blank(),
+    plot.tag = element_text(
+      size = rel(2),
+      margin = margin(
+        t = 0.1, r = 0.1,
+        b = 0.1, l = 0.1,
+        unit = "cm"
+      )
+    ),
+    plot.margin = margin(
+      t = 0.5, r = 0.5,
+      b = 0.5, l = 0,
+      unit = "cm"
+    ),
+    plot.title = element_text(
+      colour = "black",
+      size = rel(3),
+      vjust = 0,
+      hjust = 0,
+      margin = margin(
+        t = 0.25, r = 0.25,
+        b = 0.5, l = 0.25,
+        unit = "cm"
+      )
+    ),
+    plot.subtitle = element_text(
+      colour = "black",
+      size = rel(1.5),
+      hjust = 0
+    ),
+    strip.background = element_rect(
+      fill = "white",
+      colour = "black",
+      size = 1
+    ),
+    strip.text = element_text(
+      colour = "black",
+      size = rel(1.5)
+    ),
+    complete = F
+  )
+
+theme_set(custom_theme)
+
+getwd()
+set.seed(1964)
+# options(scipen = 999)
+# useful infos **reproducible research**
+sessionInfo()
+
+##############################################################################
+#### Read in data ####
+# PYN
+
+fileNames <- list.files(
+  path = "./Results",
+  full.names = T,
+  pattern = "accuracy_80_100_viYld_pyn"
+)
+traitNames <- basename(fileNames) %>%
+  str_remove_all(c("accuracy_80_100_viYld_|.txt"))
+
+load.file <- function(filename) {
+  d <- fread(file = filename, header = TRUE, check.names = F, data.table = F)
+  d
+}
+
+pheno_pyn <- lapply(fileNames, load.file)
+
+names(pheno_pyn) <- traitNames
+pheno_pyn <- plyr::ldply(pheno_pyn, data.frame, .id = "location")
+print(colnames(pheno_pyn))
+
+pheno_pyn <- pheno_pyn %>%
+  separate(location, c("trial", "location"), sep = "_") %>%
+  mutate(year = str_remove(trial, "pyn")) %>%
+  pivot_longer(
+    cols = GRYLD_20170620_MP:NDVI_20190626_RN,
+    names_to = "trait_id",
+    values_to = "accuracy"
+  ) %>%
+  separate(trait_id,
+    c("trait_id", "phenotype_date", "location"),
+    sep = "_"
+  ) %>% 
+  mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d")) %>% 
+  drop_na(accuracy)
+
+## AYN
+
+fileNames <- list.files(
+  path = "./Results",
+  full.names = T,
+  pattern = "accuracy_80_100_viYld_ayn"
+)
+traitNames <- basename(fileNames) %>%
+  str_remove_all(c("accuracy_80_100_viYld_|.txt"))
+
+pheno_ayn <- lapply(fileNames, load.file)
+
+names(pheno_ayn) <- traitNames
+pheno_ayn <- plyr::ldply(pheno_ayn, data.frame, .id = "location")
+print(colnames(pheno_ayn))
+
+pheno_ayn <- pheno_ayn %>%
+  separate(location, c("trial", "location"), sep = "_") %>%
+  mutate(year = str_remove(trial, "ayn")) %>%
+  pivot_longer(
+    cols = GRYLD_20170620_MP:NDVI_20190626_RN,
+    names_to = "trait_id",
+    values_to = "accuracy"
+  ) %>%
+  separate(trait_id,
+           c("trait_id", "phenotype_date", "location"),
+           sep = "_"
+  ) %>% 
+  mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d")) %>% 
+  drop_na(accuracy)
+
+###############################################################################
+###Figures ####
+
+pheno_pyn %>% 
+  filter(year == "19",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2019-02-01")
+         ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             #colour = location,
+             group = phenotype_date)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.15) +
+  facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "PYN 2018-2019")
+
+ggsave("./Figures/GS_cofactor_19pyn.png",
+       height = 30,
+       width = 50, units = "cm", dpi = 350
+)
+
+test_ayn18<- fread("./Results/GS_accuracy_ayn18_test.txt")
+
+test_ayn18 %>% 
+  #select(-GRYLD_NA_NA) %>% 
+  pivot_longer(cols = everything(),
+               names_to = "GSPrediction",
+               values_to = "accuracy") %>% 
+  mutate(GSPrediction = str_remove(GSPrediction, "_SA")) %>% 
+  ggplot(aes(x = GSPrediction,
+             y = accuracy)) +
+  geom_boxplot() +
+  geom_jitter() +
+  labs(title = "Genomic prediction accuracies for GRYLD",
+       subtitle = "AYN 2017-2018 Salina",
+       x = "Factors")

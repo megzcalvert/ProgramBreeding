@@ -1,14 +1,12 @@
 rm(list = objects())
 ls()
 
-library(MatrixModels)
 library(janitor)
 library(tidyverse)
 library(tidylog)
 library(readr)
 library(data.table)
-library(beepr)
-library(rrBLUP)
+library(ggridges)
 library(broom)
 
 ##### Set up work space ####
@@ -105,113 +103,1828 @@ custom_theme <- theme_minimal() %+replace%
 theme_set(custom_theme)
 
 getwd()
-setwd("/Users/megzcalvert/Dropbox/Research_Poland_Lab/BreedingProgram")
 
 set.seed(1642)
 
 #### Load data ####
 
-# geno <- fread("./GenoDatabase/SelectedGeno_Numeric.txt")
-# geno[1:10, 1:10]
-# hapgeno <- geno[, 4:ncol(geno)]
-# hapgeno[hapgeno == 0] <- -1
-# hapgeno[hapgeno == 0.5] <- 0
-# 
-# geno <- bind_cols(geno[, 1:3], hapgeno)
-# geno[1:10, 1:10]
-# 
-# pheno <- fread("./PhenoDatabase/Blups_allYrs_allVarieties.txt")
-# pheno[1:10, ]
-# 
-# genoVarieties <- as.data.frame(colnames(geno[, 4:ncol(geno)]))
-# names(genoVarieties) <- "Variety"
-# pheno <- pheno %>%
-#   semi_join(genoVarieties)
-# 
-# # transpose and remove positions
-# snpMatrix <- t(geno[, c(-1, -2, -3)])
-# snpMatrix %>% glimpse()
-# snpMatrix[1:10, 1:10]
-# 
-# snpMatrix <- setDT(as.data.frame(snpMatrix), keep.rownames = T)
-# snpMatrix[1:10, 1:10]
-# 
-# snpMatrix <- snpMatrix %>%
-#   semi_join(pheno, by = c("rn" = "Variety"))
-# rownames(snpMatrix) <- snpMatrix[, 1]
-# snpMatrix[, 1] <- NULL
-# 
-# snpMatrix <- as.matrix(snpMatrix)
-# 
-# ##### Defining the training and test populations ####
-# 
-# # define the training and test populations
-# # training-80% validation-20%
-# Pheno_train <- pheno %>%
-#   dplyr::sample_frac(0.8)
-# Pheno_valid <- pheno %>%
-#   anti_join(Pheno_train, by = "Variety")
-# 
-# m_train <- snpMatrix[Pheno_train$Variety, ]
-# m_valid <- snpMatrix[Pheno_valid$Variety, ]
-# 
-# ##### Predicting Phenotypes ####
-# ## GRYLD
-# yield <- (Pheno_train[, "GRYLD"])
-# 
-# yield_answer <- mixed.solve(yield,
-#                             Z = m_train, 
-#                             SE = TRUE
-# )
-# YLD <- yield_answer$u
-# e <- as.matrix(YLD)
-# pred_yield_valid <- m_valid %*% e
-# pred_yield <- (pred_yield_valid[, 1]) + yield_answer$beta
-# pred_yield
-# yield_valid <- Pheno_valid[, "GRYLD"]
-# YLD_accuracy <- cor(pred_yield_valid, yield_valid)
-# YLD_accuracy
-# 
-# #### Cross-validation ####
-# 
-# traits=1
-# cycles=100
-# accuracy = matrix(nrow=cycles, ncol=traits)
-# for(r in 1:cycles)
-# {
-# train= as.matrix(sample(1:96, 29))
-# test<-setdiff(1:96,train)
-# Pheno_train=Pheno[train,]
-# m_train=Markers_impute2[train,]
-# Pheno_valid=Pheno[test,]
-# m_valid=Markers_impute2[test,]
-# 
-# yield=(Pheno_train[,1])
-# yield_answer<-mixed.solve(yield, Z=m_train, K=NULL, SE = FALSE, return.Hinv=FALSE)
-# YLD = yield_answer$u
-# e = as.matrix(YLD)
-# pred_yield_valid =  m_valid %*% e
-# pred_yield=(pred_yield_valid[,1])+yield_answer$beta
-# pred_yield
-# yield_valid = Pheno_valid[,1]
-# accuracy[r,1] <-cor(pred_yield_valid, yield_valid, use="complete" )
-# }
-# mean(accuracy)
-# 
-# 
-# write.csv(accuracy17,
-#           "./R/rrBlup/HypothesisTwelve/GenomicSelection_80_100_accuracy17.txt",
-#           quote = F, row.names = F
-# )
-# colMeans(accuracy17)
+accuracy_all <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryldA.txt"
+)
+accuracy_all <- accuracy_all %>%
+  mutate(ID = row_number()) %>% 
+  pivot_longer(
+    cols = -ID,
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
 
-accuracy<- fread("./BeocatScripts/GenomicSelectionR_80_100_accuracy_allyrs.txt")
+accuracy_all %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_allGryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
 
-accuracy %>% 
-  ggplot(aes(V1)) + 
-  geom_histogram(colour = "black", fill = NA) +
-  geom_vline(xintercept = mean(accuracy$V1), colour = "blue") +
-  labs(title = "Distribution of accuracy of GRYLD genomic prediction",
-       subtitle = "rrBLUP",
-       x = "Accuracy")
-  
+accuracy_all %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_allGryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 16
+accuracy_16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_16.txt"
+)
+accuracy_16 <- accuracy_16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2015-2016 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2015-2016 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 16_ayn
+accuracy_16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_16_ayn.txt"
+)
+accuracy_16 <- accuracy_16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2015-2016 GRYLD AYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2015-2016 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 16
+accuracy_16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_16_pyn.txt"
+)
+accuracy_16 <- accuracy_16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2015-2016 GRYLD PYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2015-2016 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_16pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 17
+accuracy_17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_17.txt"
+)
+accuracy_17 <- accuracy_17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2016-2017 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2016-2017 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 17
+accuracy_17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_17_ayn.txt"
+)
+accuracy_17 <- accuracy_17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2016-2017 GRYLD AYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2016-2017 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 17
+accuracy_17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_17_pyn.txt"
+)
+accuracy_17 <- accuracy_17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2016-2017 GRYLD PYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2016-2017 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_17pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 18
+accuracy_18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_18.txt"
+)
+accuracy_18 <- accuracy_18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2017-2018 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2017-2018 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 18
+accuracy_18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_18_ayn.txt"
+)
+accuracy_18 <- accuracy_18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2017-2018 GRYLD AYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2017-2018 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 18
+accuracy_18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_18_pyn.txt"
+)
+accuracy_18 <- accuracy_18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2017-2018 GRYLD PYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2017-2018 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_18pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 19
+accuracy_19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_19.txt"
+)
+accuracy_19 <- accuracy_19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2018-2019 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2018-2019 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 19
+accuracy_19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_19_ayn.txt"
+)
+accuracy_19 <- accuracy_19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2018-2019 GRYLD AYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2018-2019 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 19
+accuracy_19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_19_pyn.txt"
+)
+accuracy_19 <- accuracy_19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "2018-2019 GRYLD PYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "2018-2019 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_19pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex16
+accuracy_ex16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex16.txt"
+)
+accuracy_ex16 <- accuracy_ex16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_ex16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## ex16
+accuracy_ex16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex16_ayn.txt"
+)
+accuracy_ex16 <- accuracy_ex16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD AYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex16
+accuracy_ex16 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex16_pyn.txt"
+)
+accuracy_ex16 <- accuracy_ex16 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex16 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD PYN",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex16 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2015-2016 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex16pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex17
+accuracy_ex17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex17.txt"
+)
+accuracy_ex17 <- accuracy_ex17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD",
+    x = "Accuracy",
+    y = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_ex17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## 17AYN
+accuracy_ex17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex17_ayn.txt"
+)
+accuracy_ex17 <- accuracy_ex17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD AYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## 17 pyn
+
+accuracy_ex17 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex17_pyn.txt"
+)
+accuracy_ex17 <- accuracy_ex17 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex17 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD PYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex17 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2016-2017 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex17pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex18
+accuracy_ex18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex18.txt"
+)
+accuracy_ex18 <- accuracy_ex18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_ex18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## ex18
+accuracy_ex18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex18_ayn.txt"
+)
+accuracy_ex18 <- accuracy_ex18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD AYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex18
+accuracy_ex18 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex18_pyn.txt"
+)
+accuracy_ex18 <- accuracy_ex18 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex18 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD PYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex18 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2017-2018 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex18pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex19
+accuracy_ex19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex19.txt"
+)
+accuracy_ex19 <- accuracy_ex19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19Gryld_boxplot.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+accuracy_ex19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19Gryld_ridges.png",
+  width = 30,
+  height = 20,
+  units = "cm",
+  dpi = 320
+)
+
+## ex19
+accuracy_ex19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex19_ayn.txt"
+)
+accuracy_ex19 <- accuracy_ex19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD AYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19aynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD AYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19aynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+## ex19
+accuracy_ex19 <- fread(
+  "./Results/GenomicSelection_rrBlup_bglr_80_100_accuracy_gryld_ex19_pyn.txt"
+)
+accuracy_ex19 <- accuracy_ex19 %>%
+  pivot_longer(
+    cols = everything(),
+    values_to = "phenotype_value",
+    names_to = "trial"
+  )
+
+accuracy_ex19 %>%
+  ggplot(aes(x = trial, y = phenotype_value)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  scale_x_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  labs(
+    title = "Distribution of accuracy of genomic prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD PYN",
+    x = "Accuracy"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19pynGryld_boxplot.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+accuracy_ex19 %>%
+  ggplot(aes(x = phenotype_value, y = trial)) +
+  geom_density_ridges(
+    quantile_lines = TRUE,
+    scale = 0.9,
+    fill = NA
+  ) +
+  scale_y_discrete(
+    breaks = c(
+      "rrBlup_modelTraining", "rrBlup_modelTesting",
+      "rkhs_modelTraining", "rkhs_modelTesting",
+      "bayesC_modelTraining", "bayesC_modelTesting"
+    ),
+    labels = c(
+      "rrBlup_Training", "rrBlup_Testing",
+      "rkhs_Training", "rkhs_Testing",
+      "bayesC_Training", "bayesC_Testing"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 1)) +
+  labs(
+    title = "Cross validation Genomic Prediction",
+    subtitle = "All years excluding 2018-2019 GRYLD PYN",
+    x = "Correlation"
+  )
+ggsave("./Figures/GP_accuracyCV_ex19pynGryld_ridges.png",
+       width = 30,
+       height = 20,
+       units = "cm",
+       dpi = 320
+)
+
+###############################################################################
+# Comparison to blups

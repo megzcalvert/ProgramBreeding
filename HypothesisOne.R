@@ -692,8 +692,8 @@ GainByResponse <- function(
         correlated_response = NA,
         direct_response = NA,
         response_ratio = NA,
-        correlated_intensity = NA,
-        direct_intensity = NA
+        correlated_intensity = as.numeric(NA),
+        direct_intensity = as.numeric(NA)
       )
 
     ID <- nrow(df)
