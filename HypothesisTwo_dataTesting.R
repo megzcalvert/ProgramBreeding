@@ -209,7 +209,13 @@ pheno_long <- pheno_long %>%
     Variety, range, column
   ) %>%
   mutate(Sep = entity_id) %>%
-  separate(Sep, c("year", "trial", "location", "treated", "plot"), sep = "-")
+  separate(Sep, 
+           c("year", "trial", "location", "treated", "plot"), 
+           sep = "-") %>% 
+  mutate(location = str_replace(location, "RP", "BEL"),
+         location = str_replace(location, "RL", "MANH"),
+         location = str_replace(location, "RN", "HUTCH"),
+         location = str_replace(location, "SA", "GYP"))
 
 trialSummary <- tabyl(pheno_long, trial, location, year)
 trialSummary
@@ -298,15 +304,13 @@ varietySummary <- pheno_long %>%
   summarise(Total = max(Count))
 
 traitSummary <- pheno_long %>%
-  group_by(year, location, trial, treated, trait_id) %>%
+  group_by(year, location, Trial, trait_id) %>%
   mutate(Count = row_number()) %>%
   summarise(
-    Total = max(Count),
-    minimum = min(phenotype_value),
     average = mean(phenotype_value),
-    maximum = max(phenotype_value),
-    variance = var(phenotype_value)
+    stdev = sd(phenotype_value)
   )
+traitSummary
 
 traitByTrialSummary <- pheno_long %>%
   group_by(year, location, Trial, treated, trait_id) %>%
@@ -358,54 +362,54 @@ pheno_excluding_19 <- pheno_long %>%
 pheno_16_MP <- pheno_long %>%
   filter(year == 16) %>%
   filter(location == "MP")
-pheno_16_RL <- pheno_long %>%
+pheno_16_MANH <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location == "RL")
-pheno_16_RN <- pheno_long %>%
+  filter(location == "MANH")
+pheno_16_HUTCH <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location == "RN")
-pheno_16_SA <- pheno_long %>%
+  filter(location == "HUTCH")
+pheno_16_GYP <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location == "SA")
+  filter(location == "GYP")
 
 pheno_17_MP <- pheno_long %>%
   filter(year == 17) %>%
   filter(location == "MP")
-pheno_17_RL <- pheno_long %>%
+pheno_17_MANH <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location == "RL")
-pheno_17_RN <- pheno_long %>%
+  filter(location == "MANH")
+pheno_17_HUTCH <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location == "RN")
-pheno_17_RP <- pheno_long %>%
+  filter(location == "HUTCH")
+pheno_17_BEL <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location == "RP")
+  filter(location == "BEL")
 
 pheno_18_MP <- pheno_long %>%
   filter(year == 18) %>%
   filter(location == "MP")
-pheno_18_RL <- pheno_long %>%
+pheno_18_MANH <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location == "RL")
-pheno_18_RN <- pheno_long %>%
+  filter(location == "MANH")
+pheno_18_HUTCH <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location == "RN")
-pheno_18_RP <- pheno_long %>%
+  filter(location == "HUTCH")
+pheno_18_BEL <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location == "RP")
-pheno_18_SA <- pheno_long %>%
+  filter(location == "BEL")
+pheno_18_GYP <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location == "SA")
+  filter(location == "GYP")
 
-pheno_19_RL <- pheno_long %>%
+pheno_19_MANH <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location == "RL")
-pheno_19_RN <- pheno_long %>%
+  filter(location == "MANH")
+pheno_19_HUTCH <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location == "RN")
-pheno_19_RP <- pheno_long %>%
+  filter(location == "HUTCH")
+pheno_19_BEL <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location == "RP")
+  filter(location == "BEL")
 
 ### All AYN for each year for heritability
 pheno_16_ayn <- pheno_long %>%
@@ -455,107 +459,107 @@ pheno_excluding_19_pyn <- pheno_long %>%
 pheno_excluding_16_including_16MP <- pheno_long %>%
   filter(year != 16) %>%
   bind_rows(pheno_16_MP)
-pheno_excluding_16_including_16RL <- pheno_long %>%
+pheno_excluding_16_including_16MANH <- pheno_long %>%
   filter(year != 16) %>%
-  bind_rows(pheno_16_RL)
-pheno_excluding_16_including_16RN <- pheno_long %>%
+  bind_rows(pheno_16_MANH)
+pheno_excluding_16_including_16HUTCH <- pheno_long %>%
   filter(year != 16) %>%
-  bind_rows(pheno_16_RN)
-pheno_excluding_16_including_16SA <- pheno_long %>%
+  bind_rows(pheno_16_HUTCH)
+pheno_excluding_16_including_16GYP <- pheno_long %>%
   filter(year != 16) %>%
-  bind_rows(pheno_16_SA)
+  bind_rows(pheno_16_GYP)
 
 pheno_excluding_17_including_17MP <- pheno_long %>%
   filter(year != 17) %>%
   bind_rows(pheno_17_MP)
-pheno_excluding_17_including_17RL <- pheno_long %>%
+pheno_excluding_17_including_17MANH <- pheno_long %>%
   filter(year != 17) %>%
-  bind_rows(pheno_17_RL)
-pheno_excluding_17_including_17RN <- pheno_long %>%
+  bind_rows(pheno_17_MANH)
+pheno_excluding_17_including_17HUTCH <- pheno_long %>%
   filter(year != 17) %>%
-  bind_rows(pheno_17_RN)
-pheno_excluding_17_including_17RP <- pheno_long %>%
+  bind_rows(pheno_17_HUTCH)
+pheno_excluding_17_including_17BEL <- pheno_long %>%
   filter(year != 17) %>%
-  bind_rows(pheno_17_RP)
+  bind_rows(pheno_17_BEL)
 
 pheno_excluding_18_including_18MP <- pheno_long %>%
   filter(year != 18) %>%
   bind_rows(pheno_18_MP)
-pheno_excluding_18_including_18RL <- pheno_long %>%
+pheno_excluding_18_including_18MANH <- pheno_long %>%
   filter(year != 18) %>%
-  bind_rows(pheno_18_RL)
-pheno_excluding_18_including_18RN <- pheno_long %>%
+  bind_rows(pheno_18_MANH)
+pheno_excluding_18_including_18HUTCH <- pheno_long %>%
   filter(year != 18) %>%
-  bind_rows(pheno_18_RN)
-pheno_excluding_18_including_18RP <- pheno_long %>%
+  bind_rows(pheno_18_HUTCH)
+pheno_excluding_18_including_18BEL <- pheno_long %>%
   filter(year != 18) %>%
-  bind_rows(pheno_18_RP)
-pheno_excluding_18_including_18SA <- pheno_long %>%
+  bind_rows(pheno_18_BEL)
+pheno_excluding_18_including_18GYP <- pheno_long %>%
   filter(year != 18) %>%
-  bind_rows(pheno_18_SA)
+  bind_rows(pheno_18_GYP)
 
-pheno_excluding_19_including_19RL <- pheno_long %>%
+pheno_excluding_19_including_19MANH <- pheno_long %>%
   filter(year != 19) %>%
-  bind_rows(pheno_19_RL)
-pheno_excluding_19_including_19RN <- pheno_long %>%
+  bind_rows(pheno_19_MANH)
+pheno_excluding_19_including_19HUTCH <- pheno_long %>%
   filter(year != 19) %>%
-  bind_rows(pheno_19_RN)
-pheno_excluding_19_including_19RP <- pheno_long %>%
+  bind_rows(pheno_19_HUTCH)
+pheno_excluding_19_including_19BEL <- pheno_long %>%
   filter(year != 19) %>%
-  bind_rows(pheno_19_RP)
+  bind_rows(pheno_19_BEL)
 
 ## Leave one location out by year
-pheno_16_MP_RL_RN <- pheno_long %>%
+pheno_16_MP_MANH_HUTCH <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location != "SA")
-pheno_16_MP_RL_SA <- pheno_long %>%
+  filter(location != "GYP")
+pheno_16_MP_MANH_GYP <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location != "RN")
-pheno_16_MP_RN_SA <- pheno_long %>%
+  filter(location != "HUTCH")
+pheno_16_MP_HUTCH_GYP <- pheno_long %>%
   filter(year == 16) %>%
-  filter(location != "RL")
-pheno_16_RN_RL_SA <- pheno_long %>%
+  filter(location != "MANH")
+pheno_16_HUTCH_MANH_GYP <- pheno_long %>%
   filter(year == 16) %>%
   filter(location != "MP")
 
-pheno_17_MP_RL_RN <- pheno_long %>%
+pheno_17_MP_MANH_HUTCH <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location != "RP")
-pheno_17_MP_RL_RP <- pheno_long %>%
+  filter(location != "BEL")
+pheno_17_MP_MANH_BEL <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location != "RN")
-pheno_17_MP_RN_RP <- pheno_long %>%
+  filter(location != "HUTCH")
+pheno_17_MP_HUTCH_BEL <- pheno_long %>%
   filter(year == 17) %>%
-  filter(location != "RL")
-pheno_17_RL_RN_RP <- pheno_long %>%
+  filter(location != "MANH")
+pheno_17_MANH_HUTCH_BEL <- pheno_long %>%
   filter(year == 17) %>%
   filter(location != "MP")
 
-pheno_18_MP_RL_RN_RP <- pheno_long %>%
+pheno_18_MP_MANH_HUTCH_BEL <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location != "SA")
-pheno_18_MP_RL_RN_SA <- pheno_long %>%
+  filter(location != "GYP")
+pheno_18_MP_MANH_HUTCH_GYP <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location != "RP")
-pheno_18_MP_RL_RP_SA <- pheno_long %>%
+  filter(location != "BEL")
+pheno_18_MP_MANH_BEL_GYP <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location != "RN")
-pheno_18_MP_RN_RP_SA <- pheno_long %>%
+  filter(location != "HUTCH")
+pheno_18_MP_HUTCH_BEL_GYP <- pheno_long %>%
   filter(year == 18) %>%
-  filter(location != "RL")
-pheno_18_RL_RN_RP_SA <- pheno_long %>%
+  filter(location != "MANH")
+pheno_18_MANH_HUTCH_BEL_GYP <- pheno_long %>%
   filter(year == 18) %>%
   filter(location != "MP")
 
-pheno_19_RL_RN <- pheno_long %>%
+pheno_19_MANH_HUTCH <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location != "RP")
-pheno_19_RL_RP <- pheno_long %>%
+  filter(location != "BEL")
+pheno_19_MANH_BEL <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location != "RN")
-pheno_19_RN_RP <- pheno_long %>%
+  filter(location != "HUTCH")
+pheno_19_HUTCH_BEL <- pheno_long %>%
   filter(year == 19) %>%
-  filter(location != "RL")
+  filter(location != "MANH")
 
 #### Testing regression models ####
 
@@ -858,9 +862,9 @@ h_gryld_excluding_16_including_16MP <- Vg / (Vg +
     psych::harmonic.mean(location_count$n)))))
 h_gryld_excluding_16_including_16MP
 
-blups_excluding_16_including_16RL <- GryldBlups(
-  dat = pheno_excluding_16_including_16RL,
-  identifier = "_excluding_16_including_16RL",
+blups_excluding_16_including_16MANH <- GryldBlups(
+  dat = pheno_excluding_16_including_16MANH,
+  identifier = "_excluding_16_including_16MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -871,45 +875,45 @@ blups_excluding_16_including_16RL <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_16_including_16RL %>%
+year_count <- pheno_excluding_16_including_16MANH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_16_including_16RL %>%
+location_count <- pheno_excluding_16_including_16MANH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_16_including_16RL %>%
+rep_count <- pheno_excluding_16_including_16MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_16_including_16RL,
+  asr = blups_excluding_16_including_16MANH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_16_including_16RL,
+  asr = blups_excluding_16_including_16MANH,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_16_including_16RL,
+  asr = blups_excluding_16_including_16MANH,
   comp = "Residual"
 )
 
-h_gryld_excluding_16_including_16RL <- Vg / (Vg +
+h_gryld_excluding_16_including_16MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_16_including_16RL
+h_gryld_excluding_16_including_16MANH
 
-blups_excluding_16_including_16RN <- GryldBlups(
-  dat = pheno_excluding_16_including_16RN,
-  identifier = "_excluding_16_including_16RN",
+blups_excluding_16_including_16HUTCH <- GryldBlups(
+  dat = pheno_excluding_16_including_16HUTCH,
+  identifier = "_excluding_16_including_16HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -920,45 +924,45 @@ blups_excluding_16_including_16RN <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_16_including_16RN %>%
+year_count <- pheno_excluding_16_including_16HUTCH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_16_including_16RN %>%
+location_count <- pheno_excluding_16_including_16HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_16_including_16RN %>%
+rep_count <- pheno_excluding_16_including_16HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_16_including_16RN,
+  asr = blups_excluding_16_including_16HUTCH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_16_including_16RN,
+  asr = blups_excluding_16_including_16HUTCH,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_16_including_16RN,
+  asr = blups_excluding_16_including_16HUTCH,
   comp = "Residual"
 )
 
-h_gryld_excluding_16_including_16RN <- Vg / (Vg +
+h_gryld_excluding_16_including_16HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_16_including_16RN
+h_gryld_excluding_16_including_16HUTCH
 
-blups_excluding_16_including_16SA <- GryldBlups(
-  dat = pheno_excluding_16_including_16SA,
-  identifier = "_excluding_16_including_16SA",
+blups_excluding_16_including_16GYP <- GryldBlups(
+  dat = pheno_excluding_16_including_16GYP,
+  identifier = "_excluding_16_including_16GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -969,41 +973,41 @@ blups_excluding_16_including_16SA <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_16_including_16SA %>%
+year_count <- pheno_excluding_16_including_16GYP %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_16_including_16SA %>%
+location_count <- pheno_excluding_16_including_16GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_16_including_16SA %>%
+rep_count <- pheno_excluding_16_including_16GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_16_including_16SA,
+  asr = blups_excluding_16_including_16GYP,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_16_including_16SA,
+  asr = blups_excluding_16_including_16GYP,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_16_including_16SA,
+  asr = blups_excluding_16_including_16GYP,
   comp = "Residual"
 )
 
-h_gryld_excluding_16_including_16SA <- Vg / (Vg +
+h_gryld_excluding_16_including_16GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_16_including_16SA
+h_gryld_excluding_16_including_16GYP
 
 blups_16 <- GryldBlups(
   dat = pheno_16, identifier = "_16",
@@ -1074,7 +1078,6 @@ blups_16_pyn <- GryldBlups(
   equation = "phenotype_value ~ (1 | Variety) +
     (1 | location) +
     (1 | location:Variety) +
-    (1 | location:rep) +
     (1 | location:treated)"
 )
 
@@ -1098,8 +1101,8 @@ h_gryld_16_pyn <- Vg / (Vg +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
 h_gryld_16_pyn
 
-blups_16_MP_RL_RN <- GryldBlups(
-  dat = pheno_16_MP_RL_RN, identifier = "_16_MP_RL_RN",
+blups_16_MP_MANH_HUTCH <- GryldBlups(
+  dat = pheno_16_MP_MANH_HUTCH, identifier = "_16_MP_MANH_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1109,28 +1112,28 @@ blups_16_MP_RL_RN <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_16_MP_RL_RN %>%
+location_count <- pheno_16_MP_MANH_HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_16_MP_RL_RN %>%
+rep_count <- pheno_16_MP_MANH_HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_MP_RL_RN, comp = "Variety")
-Vgl <- getVariance(asr = blups_16_MP_RL_RN, comp = "location:Variety")
-Ve <- getVariance(asr = blups_16_MP_RL_RN, comp = "Residual")
+Vg <- getVariance(asr = blups_16_MP_MANH_HUTCH, comp = "Variety")
+Vgl <- getVariance(asr = blups_16_MP_MANH_HUTCH, comp = "location:Variety")
+Ve <- getVariance(asr = blups_16_MP_MANH_HUTCH, comp = "Residual")
 
-h_gryld_16_MP_RL_RN <- Vg / (Vg +
+h_gryld_16_MP_MANH_HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_16_MP_RL_RN
+h_gryld_16_MP_MANH_HUTCH
 
-blups_16_MP_RL_SA <- GryldBlups(
-  dat = pheno_16_MP_RL_SA, identifier = "_16_MP_RL_SA",
+blups_16_MP_MANH_GYP <- GryldBlups(
+  dat = pheno_16_MP_MANH_GYP, identifier = "_16_MP_MANH_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1140,28 +1143,28 @@ blups_16_MP_RL_SA <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_16_MP_RL_SA %>%
+location_count <- pheno_16_MP_MANH_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_16_MP_RL_SA %>%
+rep_count <- pheno_16_MP_MANH_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_MP_RL_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_16_MP_RL_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_16_MP_RL_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_16_MP_MANH_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_16_MP_MANH_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_16_MP_MANH_GYP, comp = "Residual")
 
-h_gryld_16_MP_RL_SA <- Vg / (Vg +
+h_gryld_16_MP_MANH_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_16_MP_RL_SA
+h_gryld_16_MP_MANH_GYP
 
-blups_16_MP_RN_SA <- GryldBlups(
-  dat = pheno_16_MP_RN_SA, identifier = "_16_MP_RN_SA",
+blups_16_MP_HUTCH_GYP <- GryldBlups(
+  dat = pheno_16_MP_HUTCH_GYP, identifier = "_16_MP_HUTCH_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1171,25 +1174,25 @@ blups_16_MP_RN_SA <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_16_MP_RN_SA %>%
+location_count <- pheno_16_MP_HUTCH_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_16_MP_RN_SA %>%
+rep_count <- pheno_16_MP_HUTCH_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_MP_RN_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_16_MP_RN_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_16_MP_RN_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_16_MP_HUTCH_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_16_MP_HUTCH_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_16_MP_HUTCH_GYP, comp = "Residual")
 
-h_gryld_16_MP_RN_SA <- Vg / (Vg +
+h_gryld_16_MP_HUTCH_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_16_MP_RN_SA
+h_gryld_16_MP_HUTCH_GYP
 
 blups_16_MP <- GryldBlups(
   dat = pheno_16_MP, identifier = "_16_MP",
@@ -1214,8 +1217,8 @@ h_gryld_16_MP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
 h_gryld_16_MP
 
-blups_16_RL <- GryldBlups(
-  dat = pheno_16_RL, identifier = "_16_RL",
+blups_16_MANH <- GryldBlups(
+  dat = pheno_16_MANH, identifier = "_16_MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1225,20 +1228,20 @@ blups_16_RL <- GryldBlups(
     (1 | treated)"
 )
 
-rep_count <- pheno_16_RL %>%
+rep_count <- pheno_16_MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_RL, comp = "Variety")
-Ve <- getVariance(asr = blups_16_RL, comp = "Residual")
+Vg <- getVariance(asr = blups_16_MANH, comp = "Variety")
+Ve <- getVariance(asr = blups_16_MANH, comp = "Residual")
 
-h_gryld_16_RL <- Vg / (Vg +
+h_gryld_16_MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_16_RL
+h_gryld_16_MANH
 
-blups_16_RN <- GryldBlups(
-  dat = pheno_16_RN, identifier = "_16_RN",
+blups_16_HUTCH <- GryldBlups(
+  dat = pheno_16_HUTCH, identifier = "_16_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1248,20 +1251,20 @@ blups_16_RN <- GryldBlups(
     (1 | treated)"
 )
 
-rep_count <- pheno_16_RN %>%
+rep_count <- pheno_16_HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_RN, comp = "Variety")
-Ve <- getVariance(asr = blups_16_RN, comp = "Residual")
+Vg <- getVariance(asr = blups_16_HUTCH, comp = "Variety")
+Ve <- getVariance(asr = blups_16_HUTCH, comp = "Residual")
 
-h_gryld_16_RN <- Vg / (Vg +
+h_gryld_16_HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_16_RN
+h_gryld_16_HUTCH
 
-blups_16_SA <- GryldBlups(
-  dat = pheno_16_SA, identifier = "_16_SA",
+blups_16_GYP <- GryldBlups(
+  dat = pheno_16_GYP, identifier = "_16_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1271,17 +1274,17 @@ blups_16_SA <- GryldBlups(
     (1 | treated)"
 )
 
-rep_count <- pheno_16_SA %>%
+rep_count <- pheno_16_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_16_SA, comp = "Variety")
-Ve <- getVariance(asr = blups_16_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_16_GYP, comp = "Variety")
+Ve <- getVariance(asr = blups_16_GYP, comp = "Residual")
 
-h_gryld_16_SA <- Vg / (Vg +
+h_gryld_16_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_16_SA
+h_gryld_16_GYP
 
 #### 2016-2017 ####
 
@@ -1412,9 +1415,9 @@ h_gryld_excluding_17_including_17MP <- Vg / (Vg +
     psych::harmonic.mean(location_count$n)))))
 h_gryld_excluding_17_including_17MP
 
-blups_excluding_17_including_17RL <- GryldBlups(
-  dat = pheno_excluding_17_including_17RL,
-  identifier = "_excluding_17_including_17RL",
+blups_excluding_17_including_17MANH <- GryldBlups(
+  dat = pheno_excluding_17_including_17MANH,
+  identifier = "_excluding_17_including_17MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1425,45 +1428,45 @@ blups_excluding_17_including_17RL <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_17_including_17RL %>%
+year_count <- pheno_excluding_17_including_17MANH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_17_including_17RL %>%
+location_count <- pheno_excluding_17_including_17MANH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_17_including_17RL %>%
+rep_count <- pheno_excluding_17_including_17MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_17_including_17RL,
+  asr = blups_excluding_17_including_17MANH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_17_including_17RL,
+  asr = blups_excluding_17_including_17MANH,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_17_including_17RL,
+  asr = blups_excluding_17_including_17MANH,
   comp = "Residual"
 )
 
-h_gryld_excluding_17_including_17RL <- Vg / (Vg +
+h_gryld_excluding_17_including_17MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_17_including_17RL
+h_gryld_excluding_17_including_17MANH
 
-blups_excluding_17_including_17RN <- GryldBlups(
-  dat = pheno_excluding_17_including_17RN,
-  identifier = "_excluding_17_including_17RN",
+blups_excluding_17_including_17HUTCH <- GryldBlups(
+  dat = pheno_excluding_17_including_17HUTCH,
+  identifier = "_excluding_17_including_17HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1474,46 +1477,46 @@ blups_excluding_17_including_17RN <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_17_including_17RN %>%
+year_count <- pheno_excluding_17_including_17HUTCH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_17_including_17RN %>%
+location_count <- pheno_excluding_17_including_17HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_17_including_17RN %>%
+rep_count <- pheno_excluding_17_including_17HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_17_including_17RN,
+  asr = blups_excluding_17_including_17HUTCH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_17_including_17RN,
+  asr = blups_excluding_17_including_17HUTCH,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_17_including_17RN,
+  asr = blups_excluding_17_including_17HUTCH,
   comp = "Residual"
 )
 
-h_gryld_excluding_17_including_17RN <-
+h_gryld_excluding_17_including_17HUTCH <-
   Vg / (Vg +
     (Ve / ((psych::harmonic.mean(year_count$n) *
       psych::harmonic.mean(location_count$n) *
       psych::harmonic.mean(rep_count$n)))) +
     (Vgl / ((psych::harmonic.mean(year_count$n) *
       psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_17_including_17RN
+h_gryld_excluding_17_including_17HUTCH
 
-blups_excluding_17_including_17RP <- GryldBlups(
-  dat = pheno_excluding_17_including_17RP,
-  identifier = "_excluding_17_including_17RP",
+blups_excluding_17_including_17BEL <- GryldBlups(
+  dat = pheno_excluding_17_including_17BEL,
+  identifier = "_excluding_17_including_17BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1524,41 +1527,41 @@ blups_excluding_17_including_17RP <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_17_including_17RP %>%
+year_count <- pheno_excluding_17_including_17BEL %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_17_including_17RP %>%
+location_count <- pheno_excluding_17_including_17BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_17_including_17RP %>%
+rep_count <- pheno_excluding_17_including_17BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_17_including_17RP,
+  asr = blups_excluding_17_including_17BEL,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_17_including_17RP,
+  asr = blups_excluding_17_including_17BEL,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_17_including_17RP,
+  asr = blups_excluding_17_including_17BEL,
   comp = "Residual"
 )
 
-h_gryld_excluding_17_including_17RP <- Vg / (Vg +
+h_gryld_excluding_17_including_17BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_17_including_17RP
+h_gryld_excluding_17_including_17BEL
 
 blups_17 <- GryldBlups(
   dat = pheno_17, identifier = "_17",
@@ -1629,7 +1632,6 @@ blups_17_pyn <- GryldBlups(
   equation = "phenotype_value ~ (1 | Variety) +
     (1 | location) +
     (1 | location:Variety) +
-    (1 | location:rep) +
     (1 | location:treated)"
 )
 
@@ -1653,8 +1655,8 @@ h_gryld_17_pyn <- Vg / (Vg +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
 h_gryld_17_pyn
 
-blups_17_MP_RL_RN <- GryldBlups(
-  dat = pheno_17_MP_RL_RN, identifier = "_17_MP_RL_RN",
+blups_17_MP_MANH_HUTCH <- GryldBlups(
+  dat = pheno_17_MP_MANH_HUTCH, identifier = "_17_MP_MANH_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1664,28 +1666,28 @@ blups_17_MP_RL_RN <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_17_MP_RL_RN %>%
+location_count <- pheno_17_MP_MANH_HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_17_MP_RL_RN %>%
+rep_count <- pheno_17_MP_MANH_HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_MP_RL_RN, comp = "Variety")
-Vgl <- getVariance(asr = blups_17_MP_RL_RN, comp = "location:Variety")
-Ve <- getVariance(asr = blups_17_MP_RL_RN, comp = "Residual")
+Vg <- getVariance(asr = blups_17_MP_MANH_HUTCH, comp = "Variety")
+Vgl <- getVariance(asr = blups_17_MP_MANH_HUTCH, comp = "location:Variety")
+Ve <- getVariance(asr = blups_17_MP_MANH_HUTCH, comp = "Residual")
 
-h_gryld_17_MP_RL_RN <- Vg / (Vg +
+h_gryld_17_MP_MANH_HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_17_MP_RL_RN
+h_gryld_17_MP_MANH_HUTCH
 
-blups_17_MP_RL_RP <- GryldBlups(
-  dat = pheno_17_MP_RL_RP, identifier = "_17_MP_RL_RP",
+blups_17_MP_MANH_BEL <- GryldBlups(
+  dat = pheno_17_MP_MANH_BEL, identifier = "_17_MP_MANH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1695,28 +1697,28 @@ blups_17_MP_RL_RP <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_17_MP_RL_RP %>%
+location_count <- pheno_17_MP_MANH_BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_17_MP_RL_RP %>%
+rep_count <- pheno_17_MP_MANH_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_MP_RL_RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_17_MP_RL_RP, comp = "location:Variety")
-Ve <- getVariance(asr = blups_17_MP_RL_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_17_MP_MANH_BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_17_MP_MANH_BEL, comp = "location:Variety")
+Ve <- getVariance(asr = blups_17_MP_MANH_BEL, comp = "Residual")
 
-h_gryld_17_MP_RL_RP <- Vg / (Vg +
+h_gryld_17_MP_MANH_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_17_MP_RL_RP
+h_gryld_17_MP_MANH_BEL
 
-blups_17_MP_RN_RP <- GryldBlups(
-  dat = pheno_17_MP_RN_RP, identifier = "_17_MP_RN_RP",
+blups_17_MP_HUTCH_BEL <- GryldBlups(
+  dat = pheno_17_MP_HUTCH_BEL, identifier = "_17_MP_HUTCH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1726,28 +1728,28 @@ blups_17_MP_RN_RP <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_17_MP_RN_RP %>%
+location_count <- pheno_17_MP_HUTCH_BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_17_MP_RN_RP %>%
+rep_count <- pheno_17_MP_HUTCH_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_MP_RN_RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_17_MP_RN_RP, comp = "location:Variety")
-Ve <- getVariance(asr = blups_17_MP_RN_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_17_MP_HUTCH_BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_17_MP_HUTCH_BEL, comp = "location:Variety")
+Ve <- getVariance(asr = blups_17_MP_HUTCH_BEL, comp = "Residual")
 
-h_gryld_17_MP_RN_RP <- Vg / (Vg +
+h_gryld_17_MP_HUTCH_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_17_MP_RN_RP
+h_gryld_17_MP_HUTCH_BEL
 
-blups_17_RL_RN_RP <- GryldBlups(
-  dat = pheno_17_RL_RN_RP, identifier = "_17_RL_RN_RP",
+blups_17_MANH_HUTCH_BEL <- GryldBlups(
+  dat = pheno_17_MANH_HUTCH_BEL, identifier = "_17_MANH_HUTCH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1757,25 +1759,25 @@ blups_17_RL_RN_RP <- GryldBlups(
     (1 | location:treated)"
 )
 
-location_count <- pheno_17_RL_RN_RP %>%
+location_count <- pheno_17_MANH_HUTCH_BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_17_RL_RN_RP %>%
+rep_count <- pheno_17_MANH_HUTCH_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_RL_RN_RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_17_RL_RN_RP, comp = "location:Variety")
-Ve <- getVariance(asr = blups_17_RL_RN_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_17_MANH_HUTCH_BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_17_MANH_HUTCH_BEL, comp = "location:Variety")
+Ve <- getVariance(asr = blups_17_MANH_HUTCH_BEL, comp = "Residual")
 
-h_gryld_17_RL_RN_RP <- Vg / (Vg +
+h_gryld_17_MANH_HUTCH_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_17_RL_RN_RP
+h_gryld_17_MANH_HUTCH_BEL
 
 blups_17_MP <- GryldBlups(
   dat = pheno_17_MP, identifier = "_17_MP",
@@ -1800,8 +1802,8 @@ h_gryld_17_MP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
 h_gryld_17_MP
 
-blups_17_RL <- GryldBlups(
-  dat = pheno_17_RL, identifier = "_17_RL",
+blups_17_MANH <- GryldBlups(
+  dat = pheno_17_MANH, identifier = "_17_MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1811,20 +1813,20 @@ blups_17_RL <- GryldBlups(
     (1 | treated)"
 )
 
-rep_count <- pheno_17_RL %>%
+rep_count <- pheno_17_MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_RL, comp = "Variety")
-Ve <- getVariance(asr = blups_17_RL, comp = "Residual")
+Vg <- getVariance(asr = blups_17_MANH, comp = "Variety")
+Ve <- getVariance(asr = blups_17_MANH, comp = "Residual")
 
-h_gryld_17_RL <- Vg / (Vg +
+h_gryld_17_MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_17_RL
+h_gryld_17_MANH
 
-blups_17_RN <- GryldBlups(
-  dat = pheno_17_RN, identifier = "_17_RN",
+blups_17_HUTCH <- GryldBlups(
+  dat = pheno_17_HUTCH, identifier = "_17_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1833,20 +1835,20 @@ blups_17_RN <- GryldBlups(
     (1 | column) "
 )
 
-rep_count <- pheno_17_RN %>%
+rep_count <- pheno_17_HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_RN, comp = "Variety")
-Ve <- getVariance(asr = blups_17_RN, comp = "Residual")
+Vg <- getVariance(asr = blups_17_HUTCH, comp = "Variety")
+Ve <- getVariance(asr = blups_17_HUTCH, comp = "Residual")
 
-h_gryld_17_RN <- Vg / (Vg +
+h_gryld_17_HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_17_RN
+h_gryld_17_HUTCH
 
-blups_17_RP <- GryldBlups(
-  dat = pheno_17_RP, identifier = "_17_RP",
+blups_17_BEL <- GryldBlups(
+  dat = pheno_17_BEL, identifier = "_17_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1856,17 +1858,17 @@ blups_17_RP <- GryldBlups(
     (1 | treated)"
 )
 
-rep_count <- pheno_17_RP %>%
+rep_count <- pheno_17_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_17_RP, comp = "Variety")
-Ve <- getVariance(asr = blups_17_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_17_BEL, comp = "Variety")
+Ve <- getVariance(asr = blups_17_BEL, comp = "Residual")
 
-h_gryld_17_RP <- Vg / (Vg +
+h_gryld_17_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_17_RP
+h_gryld_17_BEL
 
 #### 2017-2018 ####
 
@@ -1987,8 +1989,8 @@ h_gryld_excluding_18_including_18MP <- Vg / (Vg +
     psych::harmonic.mean(location_count$n)))))
 h_gryld_excluding_18_including_18MP
 
-blups_excluding_18_including_18RL <- GryldBlups(
-  dat = pheno_excluding_18_including_18RL, identifier = "_excluding_18_including_18RL",
+blups_excluding_18_including_18MANH <- GryldBlups(
+  dat = pheno_excluding_18_including_18MANH, identifier = "_excluding_18_including_18MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -1999,44 +2001,44 @@ blups_excluding_18_including_18RL <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_18_including_18RL %>%
+year_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_18_including_18RL %>%
+location_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_18_including_18RL %>%
+rep_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_excluding_18_including_18RL,
+  asr = blups_excluding_18_including_18MANH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_excluding_18_including_18RL,
+  asr = blups_excluding_18_including_18MANH,
   comp = "year:location:Variety"
 )
 Ve <- getVariance(
-  asr = blups_excluding_18_including_18RL,
+  asr = blups_excluding_18_including_18MANH,
   comp = "Residual"
 )
 
-h_gryld_excluding_18_including_18RL <- Vg / (Vg +
+h_gryld_excluding_18_including_18MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_18_including_18RL
+h_gryld_excluding_18_including_18MANH
 
-blups_excluding_18_including_18RL <- GryldBlups(
-  dat = pheno_excluding_18_including_18RL, identifier = "_excluding_18_including_18RL",
+blups_excluding_18_including_18MANH <- GryldBlups(
+  dat = pheno_excluding_18_including_18MANH, identifier = "_excluding_18_including_18MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2047,35 +2049,35 @@ blups_excluding_18_including_18RL <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_18_including_18RL %>%
+year_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_18_including_18RL %>%
+location_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_18_including_18RL %>%
+rep_count <- pheno_excluding_18_including_18MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_18_including_18RL, comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_18_including_18RL, comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_18_including_18RL, comp = "Residual")
+Vg <- getVariance(asr = blups_excluding_18_including_18MANH, comp = "Variety")
+Vgl <- getVariance(asr = blups_excluding_18_including_18MANH, comp = "year:location:Variety")
+Ve <- getVariance(asr = blups_excluding_18_including_18MANH, comp = "Residual")
 
-h_gryld_excluding_18_including_18RL <- Vg / (Vg +
+h_gryld_excluding_18_including_18MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_18_including_18RL
+h_gryld_excluding_18_including_18MANH
 
-blups_excluding_18_including_18RN <- GryldBlups(
-  dat = pheno_excluding_18_including_18RN, identifier = "_excluding_18_including_18RN",
+blups_excluding_18_including_18HUTCH <- GryldBlups(
+  dat = pheno_excluding_18_including_18HUTCH, identifier = "_excluding_18_including_18HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2086,35 +2088,35 @@ blups_excluding_18_including_18RN <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_18_including_18RN %>%
+year_count <- pheno_excluding_18_including_18HUTCH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_18_including_18RN %>%
+location_count <- pheno_excluding_18_including_18HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_18_including_18RN %>%
+rep_count <- pheno_excluding_18_including_18HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_18_including_18RN, comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_18_including_18RN, comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_18_including_18RN, comp = "Residual")
+Vg <- getVariance(asr = blups_excluding_18_including_18HUTCH, comp = "Variety")
+Vgl <- getVariance(asr = blups_excluding_18_including_18HUTCH, comp = "year:location:Variety")
+Ve <- getVariance(asr = blups_excluding_18_including_18HUTCH, comp = "Residual")
 
-h_gryld_excluding_18_including_18RN <- Vg / (Vg +
+h_gryld_excluding_18_including_18HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_18_including_18RN
+h_gryld_excluding_18_including_18HUTCH
 
-blups_excluding_18_including_18RP <- GryldBlups(
-  dat = pheno_excluding_18_including_18RP, identifier = "_excluding_18_including_18RP",
+blups_excluding_18_including_18BEL <- GryldBlups(
+  dat = pheno_excluding_18_including_18BEL, identifier = "_excluding_18_including_18BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2125,35 +2127,35 @@ blups_excluding_18_including_18RP <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_18_including_18RP %>%
+year_count <- pheno_excluding_18_including_18BEL %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_18_including_18RP %>%
+location_count <- pheno_excluding_18_including_18BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_18_including_18RP %>%
+rep_count <- pheno_excluding_18_including_18BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_18_including_18RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_18_including_18RP, comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_18_including_18RP, comp = "Residual")
+Vg <- getVariance(asr = blups_excluding_18_including_18BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_excluding_18_including_18BEL, comp = "year:location:Variety")
+Ve <- getVariance(asr = blups_excluding_18_including_18BEL, comp = "Residual")
 
-h_gryld_excluding_18_including_18RP <- Vg / (Vg +
+h_gryld_excluding_18_including_18BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_18_including_18RP
+h_gryld_excluding_18_including_18BEL
 
-blups_excluding_18_including_18SA <- GryldBlups(
-  dat = pheno_excluding_18_including_18SA, identifier = "_excluding_18_including_18SA",
+blups_excluding_18_including_18GYP <- GryldBlups(
+  dat = pheno_excluding_18_including_18GYP, identifier = "_excluding_18_including_18GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2164,32 +2166,32 @@ blups_excluding_18_including_18SA <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_18_including_18SA %>%
+year_count <- pheno_excluding_18_including_18GYP %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_18_including_18SA %>%
+location_count <- pheno_excluding_18_including_18GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_18_including_18SA %>%
+rep_count <- pheno_excluding_18_including_18GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_18_including_18SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_18_including_18SA, comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_18_including_18SA, comp = "Residual")
+Vg <- getVariance(asr = blups_excluding_18_including_18GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_excluding_18_including_18GYP, comp = "year:location:Variety")
+Ve <- getVariance(asr = blups_excluding_18_including_18GYP, comp = "Residual")
 
-h_gryld_excluding_18_including_18SA <- Vg / (Vg +
+h_gryld_excluding_18_including_18GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_18_including_18SA
+h_gryld_excluding_18_including_18GYP
 
 blups_18 <- GryldBlups(
   dat = pheno_18, identifier = "_18",
@@ -2264,7 +2266,6 @@ blups_18_pyn <- GryldBlups(
   equation = "phenotype_value ~ (1 | Variety) +
                          (1 | location) +
                          (1 | location:Variety) +
-                         (1 | location:rep) +
                          (1 | location:treated)"
 )
 
@@ -2290,8 +2291,8 @@ h_gryld_18_pyn <- Vg / (Vg +
                                      psych::harmonic.mean(location_count$n)))))
 h_gryld_18_pyn
 
-blups_18_MP_RL_RN_RP <- GryldBlups(
-  dat = pheno_18_MP_RL_RN_RP, identifier = "_18_MP_RL_RN_RP",
+blups_18_MP_MANH_HUTCH_BEL <- GryldBlups(
+  dat = pheno_18_MP_MANH_HUTCH_BEL, identifier = "_18_MP_MANH_HUTCH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2301,30 +2302,30 @@ blups_18_MP_RL_RN_RP <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_18_MP_RL_RN_RP %>%
+location_count <- pheno_18_MP_MANH_HUTCH_BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_18_MP_RL_RN_RP %>%
+rep_count <- pheno_18_MP_MANH_HUTCH_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_MP_RL_RN_RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_18_MP_RL_RN_RP, comp = "location:Variety")
-Ve <- getVariance(asr = blups_18_MP_RL_RN_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MP_MANH_HUTCH_BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_18_MP_MANH_HUTCH_BEL, comp = "location:Variety")
+Ve <- getVariance(asr = blups_18_MP_MANH_HUTCH_BEL, comp = "Residual")
 
-h_gryld_18_MP_RL_RN_RP <- Vg / (Vg +
+h_gryld_18_MP_MANH_HUTCH_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_18_MP_RL_RN_RP
+h_gryld_18_MP_MANH_HUTCH_BEL
 
-blups_18_MP_RL_RN_SA <- GryldBlups(
-  dat = pheno_18_MP_RL_RN_SA, identifier = "_18_MP_RL_RN_SA",
+blups_18_MP_MANH_HUTCH_GYP <- GryldBlups(
+  dat = pheno_18_MP_MANH_HUTCH_GYP, identifier = "_18_MP_MANH_HUTCH_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2334,30 +2335,30 @@ blups_18_MP_RL_RN_SA <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_18_MP_RL_RN_SA %>%
+location_count <- pheno_18_MP_MANH_HUTCH_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_18_MP_RL_RN_SA %>%
+rep_count <- pheno_18_MP_MANH_HUTCH_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_MP_RL_RN_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_18_MP_RL_RN_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_18_MP_RL_RN_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MP_MANH_HUTCH_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_18_MP_MANH_HUTCH_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_18_MP_MANH_HUTCH_GYP, comp = "Residual")
 
-h_gryld_18_MP_RL_RN_SA <- Vg / (Vg +
+h_gryld_18_MP_MANH_HUTCH_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_18_MP_RL_RN_SA
+h_gryld_18_MP_MANH_HUTCH_GYP
 
-blups_18_MP_RL_RP_SA <- GryldBlups(
-  dat = pheno_18_MP_RL_RP_SA, identifier = "_18_MP_RL_RP_SA",
+blups_18_MP_MANH_BEL_GYP <- GryldBlups(
+  dat = pheno_18_MP_MANH_BEL_GYP, identifier = "_18_MP_MANH_BEL_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2367,30 +2368,30 @@ blups_18_MP_RL_RP_SA <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_18_MP_RL_RP_SA %>%
+location_count <- pheno_18_MP_MANH_BEL_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_18_MP_RL_RP_SA %>%
+rep_count <- pheno_18_MP_MANH_BEL_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_MP_RL_RP_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_18_MP_RL_RP_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_18_MP_RL_RP_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MP_MANH_BEL_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_18_MP_MANH_BEL_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_18_MP_MANH_BEL_GYP, comp = "Residual")
 
-h_gryld_18_MP_RL_RP_SA <- Vg / (Vg +
+h_gryld_18_MP_MANH_BEL_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_18_MP_RL_RP_SA
+h_gryld_18_MP_MANH_BEL_GYP
 
-blups_18_MP_RN_RP_SA <- GryldBlups(
-  dat = pheno_18_MP_RN_RP_SA, identifier = "_18_MP_RN_RP_SA",
+blups_18_MP_HUTCH_BEL_GYP <- GryldBlups(
+  dat = pheno_18_MP_HUTCH_BEL_GYP, identifier = "_18_MP_HUTCH_BEL_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2400,30 +2401,30 @@ blups_18_MP_RN_RP_SA <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_18_MP_RN_RP_SA %>%
+location_count <- pheno_18_MP_HUTCH_BEL_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_18_MP_RN_RP_SA %>%
+rep_count <- pheno_18_MP_HUTCH_BEL_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_MP_RN_RP_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_18_MP_RN_RP_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_18_MP_RN_RP_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MP_HUTCH_BEL_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_18_MP_HUTCH_BEL_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_18_MP_HUTCH_BEL_GYP, comp = "Residual")
 
-h_gryld_18_MP_RN_RP_SA <- Vg / (Vg +
+h_gryld_18_MP_HUTCH_BEL_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_18_MP_RN_RP_SA
+h_gryld_18_MP_HUTCH_BEL_GYP
 
-blups_18_RL_RN_RP_SA <- GryldBlups(
-  dat = pheno_18_RL_RN_RP_SA, identifier = "_18_RL_RN_RP_SA",
+blups_18_MANH_HUTCH_BEL_GYP <- GryldBlups(
+  dat = pheno_18_MANH_HUTCH_BEL_GYP, identifier = "_18_MANH_HUTCH_BEL_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2433,27 +2434,27 @@ blups_18_RL_RN_RP_SA <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_18_RL_RN_RP_SA %>%
+location_count <- pheno_18_MANH_HUTCH_BEL_GYP %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_18_RL_RN_RP_SA %>%
+rep_count <- pheno_18_MANH_HUTCH_BEL_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_RL_RN_RP_SA, comp = "Variety")
-Vgl <- getVariance(asr = blups_18_RL_RN_RP_SA, comp = "location:Variety")
-Ve <- getVariance(asr = blups_18_RL_RN_RP_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MANH_HUTCH_BEL_GYP, comp = "Variety")
+Vgl <- getVariance(asr = blups_18_MANH_HUTCH_BEL_GYP, comp = "location:Variety")
+Ve <- getVariance(asr = blups_18_MANH_HUTCH_BEL_GYP, comp = "Residual")
 
-h_gryld_18_RL_RN_RP_SA <- Vg / (Vg +
+h_gryld_18_MANH_HUTCH_BEL_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_18_RL_RN_RP_SA
+h_gryld_18_MANH_HUTCH_BEL_GYP
 
 blups_18_MP <- GryldBlups(
   dat = pheno_18_MP, identifier = "_18_MP",
@@ -2476,8 +2477,8 @@ h_gryld_18_MP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
 h_gryld_18_MP
 
-blups_18_RL <- GryldBlups(
-  dat = pheno_18_RL, identifier = "_18_RL",
+blups_18_MANH <- GryldBlups(
+  dat = pheno_18_MANH, identifier = "_18_MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2485,20 +2486,20 @@ blups_18_RL <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_18_RL %>%
+rep_count <- pheno_18_MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_RL, comp = "Variety")
-Ve <- getVariance(asr = blups_18_RL, comp = "Residual")
+Vg <- getVariance(asr = blups_18_MANH, comp = "Variety")
+Ve <- getVariance(asr = blups_18_MANH, comp = "Residual")
 
-h_gryld_18_RL <- Vg / (Vg +
+h_gryld_18_MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_18_RL
+h_gryld_18_MANH
 
-blups_18_RN <- GryldBlups(
-  dat = pheno_18_RN, identifier = "_18_RN",
+blups_18_HUTCH <- GryldBlups(
+  dat = pheno_18_HUTCH, identifier = "_18_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2506,20 +2507,20 @@ blups_18_RN <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_18_RN %>%
+rep_count <- pheno_18_HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_RN, comp = "Variety")
-Ve <- getVariance(asr = blups_18_RN, comp = "Residual")
+Vg <- getVariance(asr = blups_18_HUTCH, comp = "Variety")
+Ve <- getVariance(asr = blups_18_HUTCH, comp = "Residual")
 
-h_gryld_18_RN <- Vg / (Vg +
+h_gryld_18_HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_18_RN
+h_gryld_18_HUTCH
 
-blups_18_RP <- GryldBlups(
-  dat = pheno_18_RP, identifier = "_18_RP",
+blups_18_BEL <- GryldBlups(
+  dat = pheno_18_BEL, identifier = "_18_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2527,20 +2528,20 @@ blups_18_RP <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_18_RP %>%
+rep_count <- pheno_18_BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_RP, comp = "Variety")
-Ve <- getVariance(asr = blups_18_RP, comp = "Residual")
+Vg <- getVariance(asr = blups_18_BEL, comp = "Variety")
+Ve <- getVariance(asr = blups_18_BEL, comp = "Residual")
 
-h_gryld_18_RP <- Vg / (Vg +
+h_gryld_18_BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_18_RP
+h_gryld_18_BEL
 
-blups_18_SA <- GryldBlups(
-  dat = pheno_18_SA, identifier = "_18_SA",
+blups_18_GYP <- GryldBlups(
+  dat = pheno_18_GYP, identifier = "_18_GYP",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2548,17 +2549,17 @@ blups_18_SA <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_18_SA %>%
+rep_count <- pheno_18_GYP %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_18_SA, comp = "Variety")
-Ve <- getVariance(asr = blups_18_SA, comp = "Residual")
+Vg <- getVariance(asr = blups_18_GYP, comp = "Variety")
+Ve <- getVariance(asr = blups_18_GYP, comp = "Residual")
 
-h_gryld_18_SA <- Vg / (Vg +
+h_gryld_18_GYP <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_18_SA
+h_gryld_18_GYP
 
 #### 2018-2019 ####
 
@@ -2640,8 +2641,8 @@ h_gryld_excluding_19_pyn <- Vg / (Vg +
     psych::harmonic.mean(location_count$n)))))
 h_gryld_excluding_19_pyn
 
-blups_excluding_19_including_19RL <- GryldBlups(
-  dat = pheno_excluding_19_including_19RL, identifier = "_excluding_19_including_19RL",
+blups_excluding_19_including_19MANH <- GryldBlups(
+  dat = pheno_excluding_19_including_19MANH, identifier = "_excluding_19_including_19MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2652,39 +2653,39 @@ blups_excluding_19_including_19RL <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_19_including_19RL %>%
+year_count <- pheno_excluding_19_including_19MANH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_19_including_19RL %>%
+location_count <- pheno_excluding_19_including_19MANH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_19_including_19RL %>%
+rep_count <- pheno_excluding_19_including_19MANH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_19_including_19RL, 
+Vg <- getVariance(asr = blups_excluding_19_including_19MANH, 
                   comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_19_including_19RL, 
+Vgl <- getVariance(asr = blups_excluding_19_including_19MANH, 
                    comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_19_including_19RL, 
+Ve <- getVariance(asr = blups_excluding_19_including_19MANH, 
                   comp = "Residual")
 
-h_gryld_excluding_19_including_19RL <- Vg / (Vg +
+h_gryld_excluding_19_including_19MANH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_19_including_19RL
+h_gryld_excluding_19_including_19MANH
 
-blups_excluding_19_including_19RN <- GryldBlups(
-  dat = pheno_excluding_19_including_19RN, 
-  identifier = "_excluding_19_including_19RN",
+blups_excluding_19_including_19HUTCH <- GryldBlups(
+  dat = pheno_excluding_19_including_19HUTCH, 
+  identifier = "_excluding_19_including_19HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2695,38 +2696,38 @@ blups_excluding_19_including_19RN <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_19_including_19RN %>%
+year_count <- pheno_excluding_19_including_19HUTCH %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_19_including_19RN %>%
+location_count <- pheno_excluding_19_including_19HUTCH %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_19_including_19RN %>%
+rep_count <- pheno_excluding_19_including_19HUTCH %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_19_including_19RN,
+Vg <- getVariance(asr = blups_excluding_19_including_19HUTCH,
                   comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_19_including_19RN, 
+Vgl <- getVariance(asr = blups_excluding_19_including_19HUTCH, 
                    comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_19_including_19RN, 
+Ve <- getVariance(asr = blups_excluding_19_including_19HUTCH, 
                   comp = "Residual")
 
-h_gryld_excluding_19_including_19RN <- Vg / (Vg +
+h_gryld_excluding_19_including_19HUTCH <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_19_including_19RN
+h_gryld_excluding_19_including_19HUTCH
 
-blups_excluding_19_including_19RP <- GryldBlups(
-  dat = pheno_excluding_19_including_19RP, identifier = "_excluding_19_including_19RP",
+blups_excluding_19_including_19BEL <- GryldBlups(
+  dat = pheno_excluding_19_including_19BEL, identifier = "_excluding_19_including_19BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2737,32 +2738,32 @@ blups_excluding_19_including_19RP <- GryldBlups(
                          (1 | year:location:treated)"
 )
 
-year_count <- pheno_excluding_19_including_19RP %>%
+year_count <- pheno_excluding_19_including_19BEL %>%
   group_by(Variety, year) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-location_count <- pheno_excluding_19_including_19RP %>%
+location_count <- pheno_excluding_19_including_19BEL %>%
   group_by(Variety, year, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_excluding_19_including_19RP %>%
+rep_count <- pheno_excluding_19_including_19BEL %>%
   group_by(Variety, year, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-Vg <- getVariance(asr = blups_excluding_19_including_19RP, comp = "Variety")
-Vgl <- getVariance(asr = blups_excluding_19_including_19RP, comp = "year:location:Variety")
-Ve <- getVariance(asr = blups_excluding_19_including_19RP, comp = "Residual")
+Vg <- getVariance(asr = blups_excluding_19_including_19BEL, comp = "Variety")
+Vgl <- getVariance(asr = blups_excluding_19_including_19BEL, comp = "year:location:Variety")
+Ve <- getVariance(asr = blups_excluding_19_including_19BEL, comp = "Residual")
 
-h_gryld_excluding_19_including_19RP <- Vg / (Vg +
+h_gryld_excluding_19_including_19BEL <- Vg / (Vg +
   (Ve / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n) *
     psych::harmonic.mean(rep_count$n)))) +
   (Vgl / ((psych::harmonic.mean(year_count$n) *
     psych::harmonic.mean(location_count$n)))))
-h_gryld_excluding_19_including_19RP
+h_gryld_excluding_19_including_19BEL
 
 blups_19 <- GryldBlups(
   dat = pheno_19, identifier = "_19",
@@ -2837,8 +2838,8 @@ h_gryld_19_ayn <- Vg / (Vg +
                       (Vgl / ((psych::harmonic.mean(location_count$n)))))
 h_gryld_19_ayn
 
-blups_19_RL_RN <- GryldBlups(
-  dat = pheno_19_RL_RN, identifier = "_19_RL_RN",
+blups_19_MANH_HUTCH <- GryldBlups(
+  dat = pheno_19_MANH_HUTCH, identifier = "_19_MANH_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2848,34 +2849,34 @@ blups_19_RL_RN <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_19_RL_RN %>%
+location_count <- pheno_19_MANH_HUTCH %>%
   group_by(Variety, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_19_RL_RN %>%
+rep_count <- pheno_19_MANH_HUTCH %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RL_RN,
+  asr = blups_19_MANH_HUTCH,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_19_RL_RN,
+  asr = blups_19_MANH_HUTCH,
   comp = "location:Variety"
 )
-Ve <- getVariance(asr = blups_19_RL_RN, comp = "Residual")
+Ve <- getVariance(asr = blups_19_MANH_HUTCH, comp = "Residual")
 
-h_gryld_19_RL_RN <- Vg / (Vg +
+h_gryld_19_MANH_HUTCH <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(location_count$n) *
                                     psych::harmonic.mean(rep_count$n)))) +
                           (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_19_RL_RN
+h_gryld_19_MANH_HUTCH
 
-blups_19_RL_RP <- GryldBlups(
-  dat = pheno_19_RL_RP, identifier = "_19_RL_RP",
+blups_19_MANH_BEL <- GryldBlups(
+  dat = pheno_19_MANH_BEL, identifier = "_19_MANH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2885,34 +2886,34 @@ blups_19_RL_RP <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_19_RL_RP %>%
+location_count <- pheno_19_MANH_BEL %>%
   group_by(Variety, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_19_RL_RP %>%
+rep_count <- pheno_19_MANH_BEL %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RL_RP,
+  asr = blups_19_MANH_BEL,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_19_RL_RP,
+  asr = blups_19_MANH_BEL,
   comp = "location:Variety"
 )
-Ve <- getVariance(asr = blups_19_RL_RP, comp = "Residual")
+Ve <- getVariance(asr = blups_19_MANH_BEL, comp = "Residual")
 
-h_gryld_19_RL_RP <- Vg / (Vg +
+h_gryld_19_MANH_BEL <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(location_count$n) *
                                     psych::harmonic.mean(rep_count$n)))) +
                           (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_19_RL_RP
+h_gryld_19_MANH_BEL
 
-blups_19_RN_RP <- GryldBlups(
-  dat = pheno_19_RN_RP, identifier = "_19_RN_RP",
+blups_19_HUTCH_BEL <- GryldBlups(
+  dat = pheno_19_HUTCH_BEL, identifier = "_19_HUTCH_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2922,31 +2923,31 @@ blups_19_RN_RP <- GryldBlups(
                          (1 | location:treated)"
 )
 
-location_count <- pheno_19_RN_RP %>%
+location_count <- pheno_19_HUTCH_BEL %>%
   group_by(Variety, location) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
-rep_count <- pheno_19_RN_RP %>%
+rep_count <- pheno_19_HUTCH_BEL %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RN_RP,
+  asr = blups_19_HUTCH_BEL,
   comp = "Variety"
 )
 Vgl <- getVariance(
-  asr = blups_19_RN_RP,
+  asr = blups_19_HUTCH_BEL,
   comp = "location:Variety"
 )
-Ve <- getVariance(asr = blups_19_RN_RP, comp = "Residual")
+Ve <- getVariance(asr = blups_19_HUTCH_BEL, comp = "Residual")
 
-h_gryld_19_RN_RP <- Vg / (Vg +
+h_gryld_19_HUTCH_BEL <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(location_count$n) *
                                     psych::harmonic.mean(rep_count$n)))) +
                           (Vgl / ((psych::harmonic.mean(location_count$n)))))
-h_gryld_19_RN_RP
+h_gryld_19_HUTCH_BEL
 
 blups_19_pyn <- GryldBlups(
   dat = pheno_19_pyn, identifier = "_19_pyn",
@@ -2973,8 +2974,8 @@ h_gryld_19_pyn <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(rep_count$n)))))
 h_gryld_19_pyn
 
-blups_19_RL <- GryldBlups(
-  dat = pheno_19_RL, identifier = "_19_RL",
+blups_19_MANH <- GryldBlups(
+  dat = pheno_19_MANH, identifier = "_19_MANH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -2982,24 +2983,24 @@ blups_19_RL <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_19_RL %>%
+rep_count <- pheno_19_MANH %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RL,
+  asr = blups_19_MANH,
   comp = "Variety"
 )
 
-Ve <- getVariance(asr = blups_19_RL, comp = "Residual")
+Ve <- getVariance(asr = blups_19_MANH, comp = "Residual")
 
-h_gryld_19_RL <- Vg / (Vg +
+h_gryld_19_MANH <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_19_RL
+h_gryld_19_MANH
 
-blups_19_RN <- GryldBlups(
-  dat = pheno_19_RN, identifier = "_19_RN",
+blups_19_HUTCH <- GryldBlups(
+  dat = pheno_19_HUTCH, identifier = "_19_HUTCH",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -3007,24 +3008,24 @@ blups_19_RN <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_19_RN %>%
+rep_count <- pheno_19_HUTCH %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n())  %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RN,
+  asr = blups_19_HUTCH,
   comp = "Variety"
 )
 
-Ve <- getVariance(asr = blups_19_RN, comp = "Residual")
+Ve <- getVariance(asr = blups_19_HUTCH, comp = "Residual")
 
-h_gryld_19_RN <- Vg / (Vg +
+h_gryld_19_HUTCH <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_19_RN
+h_gryld_19_HUTCH
 
-blups_19_RP <- GryldBlups(
-  dat = pheno_19_RP, identifier = "_19_RP",
+blups_19_BEL <- GryldBlups(
+  dat = pheno_19_BEL, identifier = "_19_BEL",
   saveFile = "./Results/",
   saveFigures = "./Figures/",
   equation = "phenotype_value ~ (1 | Variety) +
@@ -3032,21 +3033,21 @@ blups_19_RP <- GryldBlups(
                          (1 | column)"
 )
 
-rep_count <- pheno_19_RP %>%
+rep_count <- pheno_19_BEL %>%
   group_by(Variety, location, rep) %>%
   summarise(n = n()) %>%
   summarise(n = n())
 
 Vg <- getVariance(
-  asr = blups_19_RP,
+  asr = blups_19_BEL,
   comp = "Variety"
 )
 
-Ve <- getVariance(asr = blups_19_RP, comp = "Residual")
+Ve <- getVariance(asr = blups_19_BEL, comp = "Residual")
 
-h_gryld_19_RP <- Vg / (Vg +
+h_gryld_19_BEL <- Vg / (Vg +
                           (Ve / ((psych::harmonic.mean(rep_count$n)))))
-h_gryld_19_RP
+h_gryld_19_BEL
 
 ##### All and Plots ####
 gryld_heritability <- tibble(
@@ -3062,13 +3063,27 @@ gryld_heritability <- gryld_heritability %>%
     values_to = "Heritability"
   ) %>%
   separate(col = data, into = c("h", "gryld", "Year", "Trial"), sep = "_") %>%
-  mutate(Trial = replace_na(Trial, "All"))
+  mutate(Trial = replace_na(Trial, "All"),
+         Year = replace_na(Year, "All"))
+
+write.table(gryld_heritability,
+            "./Results/H2_gryld_all.txt",
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 
 gryld_heritability %>%
   ggplot(aes(
     x = Year,
     y = Heritability,
-    colour = Trial
+    shape = Trial,
+    fill = Trial
   )) +
-  geom_point(size = 2) +
-  labs(title = "GRYLD Broad-sense heritabilities")
+  geom_point(size = 2, alpha = 0.65) +
+  scale_shape_manual(values = c(21,22,24)) +
+  coord_cartesian(ylim = c(0,0.5)) 
+
+ggsave(filename = "~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure2.png",
+       width = 22.5,
+       height = 15,
+       units = "cm",
+       dpi = 320)
+

@@ -112,7 +112,7 @@ sessionInfo()
 # PYN
 
 fileNames <- list.files(
-  path = "./Results",
+  path = "./BeocatScripts/Results",
   full.names = T,
   pattern = "accuracy_80_100_viYld_pyn"
 )
@@ -139,8 +139,8 @@ pheno_pyn <- pheno_pyn %>%
     values_to = "accuracy"
   ) %>%
   separate(trait_id,
-    c("trait_id", "phenotype_date", "location"),
-    sep = "_"
+           c("trait_id", "phenotype_date", "location"),
+           sep = "_"
   ) %>% 
   mutate(phenotype_date = as.Date(phenotype_date, format = "%Y%m%d")) %>% 
   drop_na(accuracy)
@@ -148,7 +148,7 @@ pheno_pyn <- pheno_pyn %>%
 ## AYN
 
 fileNames <- list.files(
-  path = "./Results",
+  path = "./BeocatScripts/Results",
   full.names = T,
   pattern = "accuracy_80_100_viYld_ayn"
 )
@@ -178,6 +178,243 @@ pheno_ayn <- pheno_ayn %>%
 
 ###############################################################################
 ###Figures ####
+ayn17_summary<- pheno_ayn %>% 
+  filter(year == "17",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2017-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy))
+
+pheno_ayn %>% 
+  filter(year == "17",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2017-02-01")
+  ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = location,
+             group = phenotype_date)) +
+  geom_jitter(alpha = 0.15) +
+facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  scale_colour_manual(values = c('#1b9e77','#d95f02','#7570b3','#e7298a')) +
+  #theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "AYN 2016-2017")
+
+ggsave("./Figures/GS_cofactor_17ayn.png",
+       height = 30,
+       width = 55, units = "cm", dpi = 350
+)
+
+pyn17_summary<- pheno_pyn %>% 
+  filter(year == "17",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2017-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy)) %>% 
+  mutate(year = "17")
+
+pheno_pyn %>% 
+  filter(year == "17",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2017-02-01")
+  ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = location,
+             group = phenotype_date)) +
+  geom_jitter(alpha = 0.15) +
+  geom_point(data = pyn17_summary,
+             aes(x = phenotype_date, 
+                 y = accuracy,
+                 colour = location),
+             size = 3) +
+  geom_errorbar(data = pyn17_summary,
+                aes(x = phenotype_date,
+                    ymin = accuracy - sd,
+                    ymax = accuracy + sd,
+                    colour = location),
+                size = 1) +
+  facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  scale_colour_manual(values =  c('#1b9e77','#d95f02','#7570b3','#e7298a')) +
+  #theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "PYN 2016-2017")
+
+ggsave("./Figures/GS_cofactor_17pyn.png",
+       height = 30,
+       width = 55, units = "cm", dpi = 350
+)
+
+ayn18_summary<- pheno_ayn %>% 
+  filter(year == "18",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2018-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy))
+
+pheno_ayn %>% 
+  filter(year == "18",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2018-02-01")
+  ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = location,
+             group = phenotype_date)) +
+  geom_jitter(alpha = 0.15) +
+  geom_point(data = ayn18_summary,
+             aes(x = phenotype_date, 
+                 y = accuracy,
+                 colour = location),
+             size = 3) +
+  geom_errorbar(data = ayn18_summary,
+                aes(x = phenotype_date,
+                    ymin = accuracy - sd,
+                    ymax = accuracy + sd,
+                    colour = location),
+                size = 1) +
+  facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  scale_colour_manual(values = c('#1b9e77','#7570b3','#e7298a','#66a61e')) +
+  #theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "AYN 2017-2018")
+
+ggsave("./Figures/GS_cofactor_18ayn.png",
+       height = 30,
+       width = 55, units = "cm", dpi = 350
+)
+
+pyn18_summary<- pheno_pyn %>% 
+  filter(year == "18",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2018-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy))  %>% 
+  mutate(year = "18")
+
+pheno_pyn %>% 
+  filter(year == "18",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2018-02-01")
+  ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = location,
+             group = phenotype_date)) +
+  geom_jitter(alpha = 0.15) +
+  geom_point(data = pyn18_summary,
+             aes(x = phenotype_date, 
+                 y = accuracy,
+                 colour = location),
+             size = 3) +
+  geom_errorbar(data = pyn18_summary,
+                aes(x = phenotype_date,
+                    ymin = accuracy - sd,
+                    ymax = accuracy + sd,
+                    colour = location),
+                size = 1) +
+  facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  scale_colour_manual(values = c('#1b9e77','#7570b3','#e7298a','#66a61e')) +
+  #theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "PYN 2017-2018")
+
+ggsave("./Figures/GS_cofactor_18pyn.png",
+       height = 30,
+       width = 55, units = "cm", dpi = 350
+)
+
+ayn19_summary<- pheno_ayn %>% 
+  filter(year == "19",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2019-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy))
+
+pheno_ayn %>% 
+  filter(year == "19",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2019-02-01")
+  ) %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = location,
+             group = phenotype_date)) +
+  geom_jitter(alpha = 0.15) +
+  geom_point(data = ayn19_summary,
+             aes(x = phenotype_date, 
+                 y = accuracy,
+                 colour = location),
+             size = 3) +
+  geom_errorbar(data = ayn19_summary,
+                aes(x = phenotype_date,
+                    ymin = accuracy - sd,
+                    ymax = accuracy + sd,
+                    colour = location),
+                size = 1) +
+  facet_wrap(~trait_id, ncol = 4, scales = "free") +
+  coord_cartesian(ylim = c(-1,1)) +
+  scale_x_date(date_labels = "%m/%d") +
+  scale_colour_manual(values =  c('#d95f02','#7570b3')) +
+  #theme(legend.position = "none") +
+  labs(title = "Using VI as a co-factor to predict GRYLD",
+       subtitle = "AYN 2018-2019")
+
+ggsave("./Figures/GS_cofactor_19ayn.png",
+       height = 30,
+       width = 55, units = "cm", dpi = 350
+)
+
+pyn19_summary<- pheno_pyn %>% 
+  filter(year == "19",
+         trait_id != "RedEdge",
+         trait_id != "Nir",
+         trait_id != "RE",
+         phenotype_date > as.Date("2019-02-01")
+  ) %>% 
+  group_by(location, phenotype_date, trait_id) %>% 
+  summarise(sd = sd(accuracy),
+            accuracy = mean(accuracy)) %>% 
+  mutate(year = "19")
 
 pheno_pyn %>% 
   filter(year == "19",
@@ -185,23 +422,34 @@ pheno_pyn %>%
          trait_id != "Nir",
          trait_id != "RE",
          phenotype_date > as.Date("2019-02-01")
-         ) %>% 
+  ) %>% 
   ggplot(aes(x = phenotype_date,
              y = accuracy,
-             #colour = location,
+             colour = location,
              group = phenotype_date)) +
-  geom_boxplot() +
   geom_jitter(alpha = 0.15) +
+  geom_point(data = pyn19_summary,
+             aes(x = phenotype_date, 
+                 y = accuracy,
+                 colour = location),
+             size = 3) +
+  geom_errorbar(data = pyn19_summary,
+                aes(x = phenotype_date,
+                    ymin = accuracy - sd,
+                    ymax = accuracy + sd,
+                    colour = location),
+                size = 1) +
   facet_wrap(~trait_id, ncol = 4, scales = "free") +
   coord_cartesian(ylim = c(-1,1)) +
   scale_x_date(date_labels = "%m/%d") +
-  theme(legend.position = "none") +
+  scale_colour_manual(values =  c('#7570b3')) +
+  #theme(legend.position = "none") +
   labs(title = "Using VI as a co-factor to predict GRYLD",
        subtitle = "PYN 2018-2019")
 
 ggsave("./Figures/GS_cofactor_19pyn.png",
        height = 30,
-       width = 50, units = "cm", dpi = 350
+       width = 55, units = "cm", dpi = 350
 )
 
 test_ayn18<- fread("./Results/GS_accuracy_ayn18_test.txt")
@@ -219,3 +467,39 @@ test_ayn18 %>%
   labs(title = "Genomic prediction accuracies for GRYLD",
        subtitle = "AYN 2017-2018 Salina",
        x = "Factors")
+
+pyn_summary<- bind_rows(pyn17_summary,pyn18_summary,pyn19_summary)
+
+pheno_pyn %>% 
+  filter(phenotype_date != "2017-12-01",
+         phenotype_date != "2017-12-07",
+         phenotype_date != "2017-12-08",
+         phenotype_date != "2017-12-19") %>% 
+  ggplot(aes(x = phenotype_date,
+             y = accuracy,
+             colour = factor(location))) +
+  geom_jitter(alpha = 0.05,
+              size = 1) +
+geom_point(data = pyn_summary, 
+           aes(x = phenotype_date,
+               y = accuracy),
+           size = 2) +
+  geom_errorbar(data = pyn_summary,
+                aes(ymin = accuracy - sd,
+                    ymax = accuracy + sd)) +
+  scale_colour_manual(values = c("#009E73","#490092","#006DDB",
+                                 "#920000","#DB6D00"),
+                      name = "Location") +
+  scale_x_date(date_labels = "%m/%d",
+               date_breaks = "3 weeks") +
+  coord_cartesian(ylim = c(-1,1)) +
+  facet_wrap(year~trait_id, scales = "free") +
+  labs(x = "Date",
+       y = "Accuracy")
+
+ggsave(filename = "~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure6.png",
+       width = 40,
+       height = 20,
+       units = "cm",
+       dpi = 320)
+

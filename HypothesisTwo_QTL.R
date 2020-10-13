@@ -125,29 +125,33 @@ pheno<- pheno %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_all) == pheno$Variety), sep = ' '))
 
-geno_all<-snpMatrix %>% 
-  semi_join(pheno, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_all<- as.data.frame(t(geno_all)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_all,
+write.table(snpMatrix_all,
             "./GenoDatabase/snpMatrix_all.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_all<- fread("./GenoDatabase/snpMatrix_all.txt")
 
-geno_all<- geno_all %>% 
+geno_all<- as.data.frame(t(geno_all)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
 
+write.table(geno_all,
+            "./GenoDatabase/geno_all.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_all<- fread("./GenoDatabase/geno_all.txt")
+
 rel_mat<- A.mat(snpMatrix_all)
+
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(rel_mat) == pheno$Variety), sep = ' '))
 
 gwas_gryld_all<- GWAS(pheno = pheno,
                       geno = geno_all,
                       K = rel_mat,
-                      n.PC = 3,
-                      P3D = TRUE,
+                      n.PC = 4,
+                      P3D = FALSE,
                       plot = TRUE)
 
 #### Pheno 16 ####
@@ -166,21 +170,22 @@ pheno_16<- pheno_16 %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_16) == pheno_16$Variety), sep = ' '))
 
-geno_16<-snpMatrix %>% 
-  semi_join(pheno_16, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_16<- as.data.frame(t(geno_16)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_16,
+write.table(snpMatrix_16,
             "./GenoDatabase/snpMatrix_16.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_16<- fread("./GenoDatabase/snpMatrix_16.txt")
 
-geno_16<- geno_16 %>% 
+geno_16<- as.data.frame(t(geno_16)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_16,
+            "./GenoDatabase/geno_16.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_16<- fread("./GenoDatabase/geno_16.txt")
 
 rel_mat<- A.mat(snpMatrix_16)
 
@@ -207,21 +212,22 @@ pheno_16_ayn<- pheno_16_ayn %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_16_ayn) == pheno_16_ayn$Variety), sep = ' '))
 
-geno_16_ayn<-snpMatrix %>% 
-  semi_join(pheno_16_ayn, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_16_ayn<- as.data.frame(t(geno_16_ayn)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_16_ayn,
+write.table(snpMatrix_16_ayn,
             "./GenoDatabase/snpMatrix_16_ayn.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_16_ayn<- fread("./GenoDatabase/snpMatrix_16_ayn.txt")
 
-geno_16_ayn<- geno_16_ayn %>% 
+geno_16_ayn<- as.data.frame(t(geno_16_ayn)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_16_ayn,
+            "./GenoDatabase/geno_16_ayn.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_16_ayn<- fread("./GenoDatabase/geno_16_ayn.txt")
 
 rel_mat<- A.mat(snpMatrix_16_ayn)
 
@@ -248,21 +254,22 @@ pheno_16_pyn<- pheno_16_pyn %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_16_pyn) == pheno_16_pyn$Variety), sep = ' '))
 
-geno_16_pyn<-snpMatrix %>% 
-  semi_join(pheno_16_pyn, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_16_pyn<- as.data.frame(t(geno_16_pyn)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_16_pyn,
+write.table(snpMatrix_16_pyn,
             "./GenoDatabase/snpMatrix_16_pyn.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_16_pyn<- fread("./GenoDatabase/snpMatrix_16_pyn.txt")
 
-geno_16_pyn<- geno_16_pyn %>% 
+geno_16_pyn<- as.data.frame(t(geno_16_pyn)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_16_pyn,
+            "./GenoDatabase/geno_16_pyn.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_16_pyn<- fread("./GenoDatabase/geno_16_pyn.txt")
 
 rel_mat<- A.mat(snpMatrix_16_pyn)
 
@@ -289,21 +296,22 @@ pheno_ex16<- pheno_ex16 %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_ex16) == pheno_ex16$Variety), sep = ' '))
 
-geno_ex16<-snpMatrix %>% 
-  semi_join(pheno_ex16, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_ex16<- as.data.frame(t(geno_ex16)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_ex16,
+write.table(snpMatrix_ex16,
             "./GenoDatabase/snpMatrix_ex16.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_ex16<- fread("./GenoDatabase/snpMatrix_ex16.txt")
 
-geno_ex16<- geno_ex16 %>% 
+geno_ex16<- as.data.frame(t(geno_ex16)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_ex16,
+            "./GenoDatabase/geno_ex16.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_ex16<- fread("./GenoDatabase/geno_ex16.txt")
 
 rel_mat<- A.mat(snpMatrix_ex16)
 
@@ -330,21 +338,22 @@ pheno_ex16_ayn<- pheno_ex16_ayn %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_ex16_ayn) == pheno_ex16_ayn$Variety), sep = ' '))
 
-geno_ex16_ayn<-snpMatrix %>% 
-  semi_join(pheno_ex16_ayn, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_ex16_ayn<- as.data.frame(t(geno_ex16_ayn)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_ex16_ayn,
+write.table(snpMatrix_ex16_ayn,
             "./GenoDatabase/snpMatrix_ex16_ayn.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_ex16_ayn<- fread("./GenoDatabase/snpMatrix_ex16_ayn.txt")
 
-geno_ex16_ayn<- geno_ex16_ayn %>% 
+geno_ex16_ayn<- as.data.frame(t(geno_ex16_ayn)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_ex16_ayn,
+            "./GenoDatabase/geno_ex16_ayn.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_ex16_ayn<- fread("./GenoDatabase/geno_ex16_ayn.txt")
 
 rel_mat<- A.mat(snpMatrix_ex16_ayn)
 
@@ -371,21 +380,22 @@ pheno_ex16_pyn<- pheno_ex16_pyn %>%
 print(paste('Check that marker matrix and phenotypes align',  
             all(rownames(snpMatrix_ex16_pyn) == pheno_ex16_pyn$Variety), sep = ' '))
 
-geno_ex16_pyn<-snpMatrix %>% 
-  semi_join(pheno_ex16_pyn, by = c("rn" = "Variety")) %>% 
-  arrange(rn)
-geno_ex16_pyn<- as.data.frame(t(geno_ex16_pyn)) %>% 
-  row_to_names(row_number = 1) 
-
-write.table(geno_ex16_pyn,
+write.table(snpMatrix_ex16_pyn,
             "./GenoDatabase/snpMatrix_ex16_pyn.txt",
-            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            quote = FALSE, col.names = TRUE, row.names = TRUE,
             sep = "\t")
 geno_ex16_pyn<- fread("./GenoDatabase/snpMatrix_ex16_pyn.txt")
 
-geno_ex16_pyn<- geno_ex16_pyn %>% 
+geno_ex16_pyn<- as.data.frame(t(geno_ex16_pyn)) %>% 
+  row_to_names(row_number = 1) %>% 
   bind_cols(positions) %>% 
   select(snp, chrom, pos, everything())
+
+write.table(geno_ex16_pyn,
+            "./GenoDatabase/geno_ex16_pyn.txt",
+            quote = FALSE, col.names = TRUE, row.names = FALSE,
+            sep = "\t")
+geno_ex16_pyn<- fread("./GenoDatabase/geno_ex16_pyn.txt")
 
 rel_mat<- A.mat(snpMatrix_ex16_pyn)
 

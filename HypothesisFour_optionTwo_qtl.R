@@ -254,7 +254,8 @@ snpMatrix <- as.data.frame(t(geno[, 4:ncol(geno)]))
 snpMatrix <- setDT(snpMatrix, keep.rownames = TRUE)
 
 snpMat_17_ayn<- snpMatrix%>% 
-  semi_join(blups17_ayn, by = c("rn" = "Variety")) %>% 
+  semi_join(blups17_ayn, by = c("rn" = "Variety")) %>%
+  arrange(rn) %>% 
   column_to_rownames(var = "rn")
 
 geno_17_ayn<- as.data.frame(t(snpMat_17_ayn)) %>% 
@@ -263,12 +264,17 @@ geno_17_ayn<- as.data.frame(t(snpMat_17_ayn)) %>%
 
 relMat <- A.mat(snpMat_17_ayn)
 
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_17_ayn) == blups17_ayn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups17_ayn$Variety), sep = ' '))
+
 ayn17<- GWAS(pheno = blups17_ayn,
              geno = geno_17_ayn,
              n.PC = 3,
              K = relMat,
              plot = FALSE,
-             P3D = TRUE)
+             P3D = FALSE)
 
 snpMat_17_pyn<- snpMatrix%>% 
   semi_join(blups17_pyn, by = c("rn" = "Variety")) %>% 
@@ -280,12 +286,17 @@ geno_17_pyn<- as.data.frame(t(snpMat_17_pyn)) %>%
 
 relMat <- A.mat(snpMat_17_pyn)
 
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_17_pyn) == blups17_pyn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups17_pyn$Variety), sep = ' '))
+
 pyn17<- GWAS(pheno = blups17_pyn,
              geno = geno_17_pyn,
              n.PC = 3,
              K = relMat,
              plot = FALSE,
-             P3D = TRUE)
+             P3D = FALSE)
 
 snpMat_18_ayn<- snpMatrix%>% 
   semi_join(blups18_ayn, by = c("rn" = "Variety")) %>% 
@@ -297,6 +308,11 @@ geno_18_ayn<- as.data.frame(t(snpMat_18_ayn)) %>%
 
 relMat <- A.mat(snpMat_18_ayn)
 
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_18_ayn) == blups18_ayn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups18_ayn$Variety), sep = ' '))
+
 blups18_ayn<- blups18_ayn %>% 
   select(-ID)
 
@@ -305,7 +321,7 @@ ayn18<- GWAS(pheno = blups18_ayn,
              n.PC = 3,
              K = relMat,
              plot = FALSE,
-             P3D = TRUE)
+             P3D = FALSE)
 
 snpMat_18_pyn<- snpMatrix%>% 
   semi_join(blups18_pyn, by = c("rn" = "Variety")) %>% 
@@ -317,12 +333,17 @@ geno_18_pyn<- as.data.frame(t(snpMat_18_pyn)) %>%
 
 relMat <- A.mat(snpMat_18_pyn)
 
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_18_pyn) == blups18_pyn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups18_pyn$Variety), sep = ' '))
+
 pyn18<- GWAS(pheno = blups18_pyn,
              geno = geno_18_pyn,
              n.PC = 3,
              K = relMat,
              plot = FALSE,
-             P3D = TRUE)
+             P3D = FALSE)
 
 snpMat_19_ayn<- snpMatrix%>% 
   semi_join(blups19_ayn, by = c("rn" = "Variety")) %>% 
@@ -334,12 +355,17 @@ geno_19_ayn<- as.data.frame(t(snpMat_19_ayn)) %>%
 
 relMat <- A.mat(snpMat_19_ayn)
 
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_19_ayn) == blups19_ayn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups19_ayn$Variety), sep = ' '))
+
 ayn19<- GWAS(pheno = blups19_ayn,
              geno = geno_19_ayn,
              n.PC = 3,
              K = relMat,
              plot = FALSE,
-             P3D = TRUE)
+             P3D = FALSE)
 
 snpMat_19_pyn<- snpMatrix%>% 
   semi_join(blups19_pyn, by = c("rn" = "Variety")) %>% 
@@ -350,6 +376,11 @@ geno_19_pyn<- as.data.frame(t(snpMat_19_pyn)) %>%
   select(snp, chrom, pos, everything())
 
 relMat <- A.mat(snpMat_19_pyn)
+
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(snpMat_19_pyn) == blups19_pyn$Variety), sep = ' '))
+print(paste('Check that marker matrix and phenotypes align',  
+            all(rownames(relMat) == blups19_pyn$Variety), sep = ' '))
 
 pyn19<- GWAS(pheno = blups19_pyn,
              geno = geno_19_pyn,

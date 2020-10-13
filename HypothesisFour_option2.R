@@ -280,6 +280,12 @@ phenoVI_18 <- phenoVI_18 %>%
   pivot_wider(
     names_from = trait_id,
     values_from = phenotype_value
+  ) %>%
+  mutate(
+    location = str_replace(location, "SA", "GYP"),
+    location = str_replace(location, "BEL", "BEL"),
+    location = str_replace(location, "RN", "HUTCH"),
+    location = str_replace(location, "RL", "MANH")
   )
 
 entityID18_VI <- tibble(entityIDVI_18 = unique(phenoVI_18$entity_id), VI = 1)
@@ -326,7 +332,11 @@ phenoVI_19 <- phenoVI_19 %>%
   ) %>%
   mutate(
     location = str_replace(location, "ASH", "RL"),
-    phenotype_date = str_remove(phenotype_date, "X")
+    phenotype_date = str_remove(phenotype_date, "X"),
+    location = str_replace(location, "RP", "BEL"),
+    location = str_replace(location, "SA", "GYP"),
+    location = str_replace(location, "RN", "HUTCH"),
+    location = str_replace(location, "RL", "MANH")
   ) %>%
   filter(trait_id != "Nir") %>%
   filter(trait_id != "RE") %>%
@@ -347,13 +357,6 @@ entityID19_VI <- tibble(entityIDVI_19 = unique(phenoVI_19$Plot_ID), VI = 1)
 
 entityID17 <- entityID17_db %>%
   left_join(entityID17_VI, by = c("entityIDdb_17" = "entityIDVI_17")) %>%
-  mutate(
-    Total = DB + VI,
-    Total = replace_na(Total, 99)
-  )
-
-entityID18 <- entityID18_db %>%
-  left_join(entityID18_VI, by = c("entityIDdb_18" = "entityIDVI_18")) %>%
   mutate(
     Total = DB + VI,
     Total = replace_na(Total, 99)
@@ -380,15 +383,6 @@ missing17_vi <- phenoVI_17 %>%
 colnames(pheno17)
 colnames(phenoVI_17)
 
-missing18_pheno <- pheno18 %>%
-  anti_join(phenoVI_18) %>%
-  select(-trait_id, -phenotype_value, -phenotype_person, -phenotype_date) %>%
-  distinct()
-
-write.table(missing18_pheno,
-  file = "./missingVI_pheno18.txt", quote = FALSE,
-  sep = "\t", row.names = FALSE, col.names = TRUE
-)
 write.table(missing17_pheno,
   file = "./missingVI_pheno17.txt", quote = FALSE,
   sep = "\t", row.names = FALSE, col.names = TRUE
@@ -398,7 +392,7 @@ pheno17 <- pheno17 %>%
   filter(trait_id != "PTHT") %>%
   mutate(phenotype_date = if_else(phenotype_date == "2017-06-21",
     "2017-06-22",
-    phenotype_date,
+    as.character(phenotype_date),
     missing = NULL
   )) %>%
   unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
@@ -414,6 +408,12 @@ pheno17 <- pheno17 %>%
   pivot_longer(
     cols = `NDVI_20170525`:`GRYLD_2017-06-22`, names_to = "trait_ID",
     values_to = "phenotype_value"
+  ) %>%
+  mutate(
+    location = str_replace(location, "RP", "BEL"),
+    location = str_replace(location, "SA", "GYP"),
+    location = str_replace(location, "RN", "HUTCH"),
+    location = str_replace(location, "RL", "MANH")
   ) %>%
   mutate(
     Variety = as.factor(Variety),
@@ -499,7 +499,7 @@ pheno19 <- pheno19 %>%
     values_from = phenotype_value
   ) %>%
   pivot_longer(
-    cols = GRYLD_RP_20190717:NDVI_RL_20190617,
+    cols = GRYLD_BEL_20190717:NDVI_MANH_20190617,
     names_to = "trait_id",
     values_to = "phenotype_value"
   ) %>%
@@ -599,6 +599,15 @@ pheno17_pyn <- pheno17 %>%
   filter(Trial == "PYN")
 varieties17_pyn <- tibble(Variety = unique(pheno17_pyn$Variety))
 
+pheno17_MP <- pheno17 %>%
+  filter(location == "MP")
+pheno17_MANH <- pheno17 %>%
+  filter(location == "MANH")
+pheno17_HUTCH <- pheno17 %>%
+  filter(location == "HUTCH")
+pheno17_BEL <- pheno17 %>%
+  filter(location == "BEL")
+
 pheno18 <- pheno18 %>%
   separate(col = trait_ID, into = c("trait_ID", "Date"), sep = "_") %>%
   mutate(
@@ -616,6 +625,15 @@ varieties18_ayn <- tibble(Variety = unique(pheno18_ayn$Variety))
 pheno18_pyn <- pheno18 %>%
   filter(Trial == "PYN")
 varieties18_pyn <- tibble(Variety = unique(pheno18_pyn$Variety))
+
+pheno18_MP <- pheno18 %>%
+  filter(location == "MP")
+pheno18_HUTCH <- pheno18 %>%
+  filter(location == "HUTCH")
+pheno18_BEL <- pheno18 %>%
+  filter(location == "BEL")
+pheno18_GYP <- pheno18 %>%
+  filter(location == "GYP")
 
 pheno19 <- pheno19 %>%
   separate(
@@ -637,6 +655,13 @@ varieties19_ayn <- tibble(Variety = unique(pheno19_ayn$Variety))
 pheno19_pyn <- pheno19 %>%
   filter(Trial == "PYN")
 varieties19_pyn <- tibble(Variety = unique(pheno19_pyn$Variety))
+
+pheno19_MANH <- pheno19 %>%
+  filter(location == "MANH")
+pheno19_HUTCH <- pheno19 %>%
+  filter(location == "HUTCH")
+pheno19_BEL <- pheno19 %>%
+  filter(location == "BEL")
 
 pheno17_pyn %>%
   filter(trait_ID != "GRYLD") %>%
@@ -884,7 +909,7 @@ ayn_18 <- ayn_18 %>%
   mutate(Date = as.Date(Date, format = "%Y-%m-%d"))
 
 pheno19_ayn <- pheno19_ayn %>%
-  filter(location != "RP") %>%
+  filter(location != "BEL") %>%
   unite("trait_ID", trait_id, phenotype_date, location, sep = "_") %>%
   group_by(trait_ID) %>%
   mutate(
@@ -954,13 +979,13 @@ ayn_19 <- ayn_19 %>%
   separate(trait_ID, c("trait_ID", "Date", "location"), sep = "_") %>%
   mutate(Date = as.Date(Date, format = "%Y-%m-%d"))
 
-ayn_17 %>%
+h17 <- ayn_17 %>%
   filter(trait_ID != "GRYLD") %>%
   # filter(Date > as.Date("2018-01-02")) %>%
   ggplot(aes(x = Date, y = H, colour = as.factor(location))) +
   geom_point() +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e"),
     name = "Location"
   ) +
   scale_x_date(date_labels = "%m/%d") +
@@ -978,7 +1003,7 @@ ggsave("./Figures/Heritability_VI_2017_ayn.png",
   width = 35, units = "cm", dpi = 350
 )
 
-ayn_18 %>%
+h18 <- ayn_18 %>%
   filter(trait_ID != "GRYLD") %>%
   filter(Date > as.Date("2018-01-02")) %>%
   ggplot(aes(x = Date, y = H, colour = as.factor(location))) +
@@ -997,18 +1022,19 @@ ayn_18 %>%
     })
   )
 
+h18
 ggsave("./Figures/Heritability_VI_2018_ayn.png",
   height = 10,
   width = 35, units = "cm", dpi = 350
 )
 
-ayn_19 %>%
+h19 <- ayn_19 %>%
   filter(trait_ID != "GRYLD") %>%
   # filter(Date > as.Date("2018-01-02")) %>%
   ggplot(aes(x = Date, y = H, colour = as.factor(location))) +
   geom_point() +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#d95f02", "#7570b3"),
     name = "Location"
   ) +
   scale_x_date(date_labels = "%m/%d") +
@@ -1020,6 +1046,8 @@ ayn_19 %>%
       2
     })
   )
+
+h19
 
 ggsave("./Figures/Heritability_VI_2019_ayn.png",
   height = 10,
@@ -1039,6 +1067,46 @@ write.table(ayn_19, "./Results/H2_ayn_2019.txt",
   sep = "\t", row.names = FALSE, col.names = TRUE
 )
 
+ayn_17 <- ayn_17 %>%
+  mutate(year = as.factor(17))
+ayn_18 <- ayn_18 %>%
+  filter(Date > as.Date("2018-02-02")) %>%
+  mutate(year = as.factor(18))
+ayn_19 <- ayn_19 %>%
+  mutate(year = as.factor(19))
+
+h_all <- bind_rows(ayn_17, ayn_18, ayn_19) %>%
+  filter(trait_ID != "GRYLD") %>%
+  ggplot(aes(x = Date, y = H, colour = as.factor(location))) +
+  geom_point() +
+  scale_colour_manual(
+    values = c(
+      "#009E73", "#490092", "#006DDB",
+      "#920000", "#DB6D00"
+    ),
+    name = "Location"
+  ) +
+  scale_x_date(
+    date_labels = "%m/%d",
+    date_breaks = "2 weeks"
+  ) +
+  facet_wrap(year ~ trait_ID, scales = "free") +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(
+    y = expression("H"^{
+      2
+    })
+  )
+h_all
+
+ggsave(
+  filename = "~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure3.png",
+  width = 40,
+  height = 18,
+  units = "cm",
+  dpi = 320
+)
+
 ###############################################################################
 ##### BLUPs ######
 library(asreml)
@@ -1047,7 +1115,7 @@ asreml.license.status()
 ## 2017
 # Pyn
 pheno17_pyn <- pheno17_pyn %>%
-  filter(location != "RP") %>%
+  filter(location != "BEL") %>%
   unite("trait_ID", trait_ID, Date, location, sep = "_") %>%
   group_by(trait_ID) %>%
   mutate(
@@ -1471,7 +1539,7 @@ pheno19_pyn <- pheno19_pyn %>%
   group_by(trait_ID) %>%
   mutate(
     group = "group",
-    ID = dplyr::group_indices()
+    ID = cur_group_id()
   ) %>%
   unite("ID", group, ID, sep = "_") %>%
   select(-range) %>%
@@ -1680,6 +1748,267 @@ write.table(blups19_ayn, "./Results/Blups_ayn_19.txt",
   quote = FALSE,
   sep = "\t", row.names = FALSE, col.names = TRUE
 )
+#### individual locations ####
+
+blups_by_location <- function(dat, saveFile, joinFile, ...) {
+  fieldTraits <- c(
+    "entity_id", "Variety", "range", "column",
+    "year", "trial", "location",
+    "plot", "Trial", "block", "rep"
+  )
+
+  fieldInfo <- dat %>%
+    select(any_of(fieldTraits))
+
+  traits <- dat %>%
+    select(-any_of(fieldTraits))
+  traits <- colnames(traits)
+
+  for (i in traits) {
+    print(paste("Working on trait", i))
+
+    data <- cbind(fieldInfo, dat[, paste(i)])
+    names(data) <- c(
+      "entity_id", "Variety", "range", "column",
+      "year", "trial", "location",
+      "plot", "Trial", "block", "rep", "Trait"
+    )
+    data <- data %>%
+      drop_na(Trait)
+
+    t_fit <- asreml(
+      fixed = Trait ~ 1,
+      random = ~ Variety + rep + range +
+        column,
+      data = data
+    )
+    pdf(paste0(
+      saveFile,
+      i, ".pdf"
+    ))
+    plot(t_fit)
+
+    blups <- setDT(as.data.frame(coef(t_fit)$random), keep.rownames = T)
+    blups$rn <- str_remove(blups$rn, "Variety_")
+    colnames(blups)[colnames(blups) == "rn"] <- "Variety"
+    colnames(blups)[colnames(blups) == "effect"] <- paste(i)
+
+    joinFile <- joinFile %>%
+      tidylog::left_join(blups, by = "Variety")
+    graphics.off()
+  }
+  return(joinFile)
+}
+
+pheno17_MP <- pheno17_MP %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno17_MP_varieties <- as.data.frame(pheno17_MP$Variety)
+names(pheno17_MP_varieties)[1] <- "Variety"
+
+blups17_MP <- blups_by_location(
+  dat = pheno17_MP,
+  saveFile = "./Figures/blups_VI_17_MP",
+  joinFile = pheno17_MP_varieties
+)
+
+pheno17_MANH <- pheno17_MANH %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno17_MANH_varieties <- as.data.frame(pheno17_MANH$Variety)
+names(pheno17_MANH_varieties)[1] <- "Variety"
+
+blups17_MANH <- blups_by_location(
+  dat = pheno17_MANH,
+  saveFile = "./Figures/blups_VI_17_MANH",
+  joinFile = pheno17_MANH_varieties
+)
+
+pheno17_HUTCH <- pheno17_HUTCH %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno17_HUTCH_varieties <- as.data.frame(pheno17_HUTCH$Variety)
+names(pheno17_HUTCH_varieties)[1] <- "Variety"
+
+blups17_HUTCH <- blups_by_location(
+  dat = pheno17_HUTCH,
+  saveFile = "./Figures/blups_VI_17_HUTCH",
+  joinFile = pheno17_HUTCH_varieties
+)
+
+pheno17_BEL <- pheno17_BEL %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno17_BEL_varieties <- as.data.frame(pheno17_BEL$Variety)
+names(pheno17_BEL_varieties)[1] <- "Variety"
+
+blups17_BEL <- blups_by_location(
+  dat = pheno17_BEL,
+  saveFile = "./Figures/blups_VI_17_BEL",
+  joinFile = pheno17_BEL_varieties
+)
+
+pheno18_MP <- pheno18_MP %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno18_MP_varieties <- as.data.frame(pheno18_MP$Variety)
+names(pheno18_MP_varieties)[1] <- "Variety"
+
+blups18_MP <- blups_by_location(
+  dat = pheno18_MP,
+  saveFile = "./Figures/blups_VI_18_MP",
+  joinFile = pheno18_MP_varieties
+)
+
+pheno18_HUTCH <- pheno18_HUTCH %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno18_HUTCH_varieties <- as.data.frame(pheno18_HUTCH$Variety)
+names(pheno18_HUTCH_varieties)[1] <- "Variety"
+
+blups18_HUTCH <- blups_by_location(
+  dat = pheno18_HUTCH,
+  saveFile = "./Figures/blups_VI_18_HUTCH",
+  joinFile = pheno18_HUTCH_varieties
+)
+
+pheno18_BEL <- pheno18_BEL %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno18_BEL_varieties <- as.data.frame(pheno18_BEL$Variety)
+names(pheno18_BEL_varieties)[1] <- "Variety"
+
+blups18_BEL <- blups_by_location(
+  dat = pheno18_BEL,
+  saveFile = "./Figures/blups_VI_18_BEL",
+  joinFile = pheno18_BEL_varieties
+)
+
+pheno18_GYP <- pheno18_GYP %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_ID, Date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno18_GYP_varieties <- as.data.frame(pheno18_GYP$Variety)
+names(pheno18_GYP_varieties)[1] <- "Variety"
+
+blups18_GYP <- blups_by_location(
+  dat = pheno18_GYP,
+  saveFile = "./Figures/blups_VI_18_GYP",
+  joinFile = pheno18_GYP_varieties
+)
+
+pheno19_MANH <- pheno19_MANH %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno19_MANH_varieties <- as.data.frame(pheno19_MANH$Variety)
+names(pheno19_MANH_varieties)[1] <- "Variety"
+
+blups19_MANH <- blups_by_location(
+  dat = pheno19_MANH,
+  saveFile = "./Figures/blups_VI_19_MANH",
+  joinFile = pheno19_MANH_varieties
+)
+
+pheno19_HUTCH <- pheno19_HUTCH %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno19_HUTCH_varieties <- as.data.frame(pheno19_HUTCH$Variety)
+names(pheno19_HUTCH_varieties)[1] <- "Variety"
+
+blups19_HUTCH <- blups_by_location(
+  dat = pheno19_HUTCH,
+  saveFile = "./Figures/blups_VI_19_HUTCH",
+  joinFile = pheno19_HUTCH_varieties
+)
+
+pheno19_BEL <- pheno19_BEL %>%
+  select(-phenotype_person, -treated) %>%
+  unite("trait_id", trait_id, phenotype_date, sep = "_") %>%
+  pivot_wider(
+    names_from = trait_id,
+    values_from = phenotype_value
+  )
+pheno19_BEL_varieties <- as.data.frame(pheno19_BEL$Variety)
+names(pheno19_BEL_varieties)[1] <- "Variety"
+
+blups19_BEL <- blups_by_location(
+  dat = pheno19_BEL,
+  saveFile = "./Figures/blups_VI_19_BEL",
+  joinFile = pheno19_BEL_varieties
+)
+
+write.table(blups17_MP, "./Results/Blups_MP_17.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups17_MANH, "./Results/Blups_MANH_17.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups17_HUTCH, "./Results/Blups_HUTCH_17.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups17_BEL, "./Results/Blups_BEL_17.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+
+write.table(blups18_MP, "./Results/Blups_MP_18.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups18_HUTCH, "./Results/Blups_HUTCH_18.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups18_BEL, "./Results/Blups_BEL_18.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
+write.table(blups18_GYP, "./Results/Blups_GYP_18.txt",
+  quote = FALSE,
+  sep = "\t", row.names = FALSE, col.names = TRUE
+)
 
 ###############################################################################
 blups17_ayn <- fread("./Results/Blups_ayn_17.txt")
@@ -1725,10 +2054,6 @@ flattenCorrMatrix <- function(cormat, pmat) {
   )
 }
 
-gryld17 <- fread("./PhenoDatabase/BlupsGRYLD_17_allVarieties.txt")
-gryld18 <- fread("./PhenoDatabase/BlupsGRYLD_18_allVarieties.txt")
-gryld19 <- fread("./PhenoDatabase/BlupsGRYLD_19_allVarieties.txt")
-
 blups17_ayn <- blups17_ayn %>%
   unite("trait_id", trait_id, phenotype_date, location, sep = "_") %>%
   pivot_wider(names_from = trait_id, values_from = phenotype_value)
@@ -1754,22 +2079,10 @@ blups19_pyn <- blups19_pyn %>%
   unite("trait_id", trait_id, phenotype_date, location, sep = "_") %>%
   pivot_wider(names_from = trait_id, values_from = phenotype_value)
 
-cor_17ayn_pheno <- Hmisc::rcorr(as.matrix(pheno17_ayn[, 14:ncol(pheno17_ayn)]))
-cor_17ayn_pheno <- flattenCorrMatrix(
-  cormat = cor_17ayn_pheno$r,
-  pmat = cor_17ayn_pheno$P
-)
-
 cor_17ayn <- Hmisc::rcorr(as.matrix(blups17_ayn[, 2:ncol(blups17_ayn)]))
 cor_17ayn <- flattenCorrMatrix(
   cormat = cor_17ayn$r,
   pmat = cor_17ayn$P
-)
-
-cor_17pyn_pheno <- Hmisc::rcorr(as.matrix(pheno17_pyn[, 12:ncol(pheno17_pyn)]))
-cor_17pyn_pheno <- flattenCorrMatrix(
-  cormat = cor_17pyn_pheno$r,
-  pmat = cor_17pyn_pheno$P
 )
 
 cor_17pyn <- Hmisc::rcorr(as.matrix(blups17_pyn[, 2:ncol(blups17_pyn)]))
@@ -1778,22 +2091,10 @@ cor_17pyn <- flattenCorrMatrix(
   pmat = cor_17pyn$P
 )
 
-cor_18ayn_pheno <- Hmisc::rcorr(as.matrix(pheno18_ayn[, 14:ncol(pheno18_ayn)]))
-cor_18ayn_pheno <- flattenCorrMatrix(
-  cormat = cor_18ayn_pheno$r,
-  pmat = cor_18ayn_pheno$P
-)
-
 cor_18ayn <- Hmisc::rcorr(as.matrix(blups18_ayn[, 3:ncol(blups18_ayn)]))
 cor_18ayn <- flattenCorrMatrix(
   cormat = cor_18ayn$r,
   pmat = cor_18ayn$P
-)
-
-cor_18pyn_pheno <- Hmisc::rcorr(as.matrix(pheno18_pyn[, 12:ncol(pheno18_pyn)]))
-cor_18pyn_pheno <- flattenCorrMatrix(
-  cormat = cor_18pyn_pheno$r,
-  pmat = cor_18pyn_pheno$P
 )
 
 cor_18pyn <- Hmisc::rcorr(as.matrix(blups18_pyn[, 2:ncol(blups18_pyn)]))
@@ -1802,22 +2103,10 @@ cor_18pyn <- flattenCorrMatrix(
   pmat = cor_18pyn$P
 )
 
-cor_19ayn_pheno <- Hmisc::rcorr(as.matrix(pheno19_ayn[, 14:ncol(pheno19_ayn)]))
-cor_19ayn_pheno <- flattenCorrMatrix(
-  cormat = cor_19ayn_pheno$r,
-  pmat = cor_19ayn_pheno$P
-)
-
 cor_19ayn <- Hmisc::rcorr(as.matrix(blups19_ayn[, 2:ncol(blups19_ayn)]))
 cor_19ayn <- flattenCorrMatrix(
   cormat = cor_19ayn$r,
   pmat = cor_19ayn$P
-)
-
-cor_19pyn_pheno <- Hmisc::rcorr(as.matrix(pheno19_pyn[, 13:ncol(pheno19_pyn)]))
-cor_19pyn_pheno <- flattenCorrMatrix(
-  cormat = cor_19pyn_pheno$r,
-  pmat = cor_19pyn_pheno$P
 )
 
 cor_19pyn <- Hmisc::rcorr(as.matrix(blups19_pyn[, 2:ncol(blups19_pyn)]))
@@ -1881,7 +2170,7 @@ cor_17ayn %>%
   scale_x_date(date_labels = "%m/%d", date_breaks = "2 weeks") +
   scale_y_continuous(limits = c(-1, 1)) +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#1b9e77", "#d95f02", "#7570b3", "#e7298a"),
     name = "Location"
   ) +
   labs(
@@ -1952,7 +2241,7 @@ cor_17pyn %>%
   scale_x_date(date_labels = "%m/%d", date_breaks = "2 weeks") +
   scale_y_continuous(limits = c(-1, 1)) +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#1b9e77", "#7570b3"),
     name = "Location"
   ) +
   labs(
@@ -2126,10 +2415,6 @@ cor_19ayn <- cor_19ayn %>%
       column_phenotype_date,
       "2019-06-15"
     ),
-    column_location = if_else(is.na(column_location),
-      "All",
-      column_location
-    ),
     facet_trait_id = if_else(
       row_trait_id == "GRYLD", column_trait_id, row_trait_id, missing = NULL
     ),
@@ -2144,10 +2429,6 @@ cor_19ayn <- cor_19ayn %>%
     row_location == column_location
   ) %>%
   mutate(
-    column_location = if_else(column_location == "All",
-      "Season",
-      "Field"
-    ),
     row_phenotype_date = as.Date(row_phenotype_date, format = "%Y-%m-%d"),
     column_phenotype_date = as.Date(column_phenotype_date, format = "%Y-%m-%d")
   )
@@ -2170,7 +2451,7 @@ cor_19ayn %>%
   scale_x_date(date_labels = "%m/%d", date_breaks = "3 weeks") +
   scale_y_continuous(limits = c(-1, 1)) +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#d95f02", "#7570b3"),
     name = "Location"
   ) +
   labs(
@@ -2200,10 +2481,6 @@ cor_19pyn <- cor_19pyn %>%
       column_phenotype_date,
       "2019-07-15"
     ),
-    column_location = if_else(is.na(column_location),
-      "All",
-      column_location
-    ),
     facet_trait_id = if_else(
       row_trait_id == "GRYLD", column_trait_id, row_trait_id, missing = NULL
     ),
@@ -2213,15 +2490,11 @@ cor_19pyn <- cor_19pyn %>%
     ),
     facet_date = as.Date(facet_date)
   ) %>%
-  filter(row_location == column_location) %>%
+  filter(row_location == column_location,
+         facet_trait_id != "GRYLD",) %>%
   mutate(
-    column_location = if_else(column_location == "All",
-      "Season",
-      "Field"
-    ),
     row_phenotype_date = as.Date(row_phenotype_date, format = "%Y-%m-%d")
   )
-
 
 write.table(cor_19pyn,
   file = "./Results/Correlations_pyn19.txt",
@@ -2241,7 +2514,7 @@ cor_19pyn %>%
   scale_x_date(date_labels = "%m/%d", date_breaks = "3 weeks") +
   scale_y_continuous(limits = c(-1, 1)) +
   scale_colour_manual(
-    values = c("#1b9e77", "#7570b3", "#e7298a", "#66a61e"),
+    values = c("#7570b3"),
     name = "Location"
   ) +
   labs(
@@ -2256,6 +2529,86 @@ ggsave("./Figures/correlation_19_pyn.png",
   width = 35, units = "cm", dpi = 350
 )
 
+cor_17ayn <- cor_17ayn %>%
+  mutate(
+    Trial = "AYN",
+    year = as.factor(17),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_17pyn <- cor_17pyn %>%
+  mutate(
+    Trial = "PYN",
+    year = as.factor(17),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_18ayn <- cor_18ayn %>%
+  mutate(
+    Trial = "AYN",
+    year = as.factor(18),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_18pyn <- cor_18pyn %>%
+  mutate(
+    Trial = "PYN",
+    year = as.factor(18),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_19ayn <- cor_19ayn %>%
+  mutate(
+    Trial = "AYN",
+    year = as.factor(19),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_19pyn <- cor_19pyn %>%
+  mutate(
+    Trial = "PYN",
+    year = as.factor(19),
+    column_phenotype_date = as.Date(column_phenotype_date)
+  )
+cor_all <- bind_rows(
+  cor_17ayn, cor_17pyn,
+  cor_18ayn, cor_18pyn,
+  cor_19ayn, cor_19pyn
+)
+
+cor_all %>%
+  filter(
+    facet_date != "2017-12-01",
+    facet_date != "2017-12-19",
+    facet_date != "2017-12-07",
+    facet_date != "2017-12-08"
+  ) %>%
+  ggplot(aes(
+    x = facet_date,
+    y = cor,
+    colour = row_location
+  )) +
+  geom_point() +
+  scale_colour_manual(
+    values = c(
+      "#009E73", "#490092", "#006DDB",
+      "#920000", "#DB6D00"
+    ),
+    name = "Location"
+  ) +
+  scale_x_date(
+    date_labels = "%m/%d",
+    date_breaks = "2 weeks"
+  ) +
+  facet_wrap(year ~ Trial, scales = "free", ncol = 2) +
+  coord_cartesian(ylim = c(-1, 1)) +
+  labs(
+    x = "Date",
+    y = "Correlation"
+  )
+
+ggsave(
+  filename = "~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure4.png",
+  width = 35,
+  height = 18,
+  units = "cm",
+  dpi = 320
+)
 
 #### writing Blups ####
 write.table(blups17_pyn, "./Results/Blups_pyn_17.txt",
@@ -2282,3 +2635,4 @@ write.table(blups19_ayn, "./Results/Blups_ayn_19.txt",
   quote = FALSE,
   sep = "\t", row.names = FALSE, col.names = TRUE
 )
+

@@ -106,499 +106,6 @@ getwd()
 sessionInfo()
 # options(scipen = 999)
 
-################## Initial scenario ##################
-
-budget <- 100000
-## per breeding *cycle*
-Line_dev_cost <- 10
-## the cost of generating an inbred line, applied to either form of evaluation
-ayn_number <- 100
-## number of AYN to be planted
-
-pheno_cost <- 85
-## cost to phenotype in field
-pheno_rep <- 6
-## number of phenotyping plots planted
-pheno_cycle_length <- 1
-## number of years phenotypic selection cycle takes
-
-geno_cost <- 5
-## cost to genotype
-geno_cycle_length <- 1
-## number of years prediction selection cycle takes
-
-# Number of plots if only phenotyping
-only_pheno <- floor(budget / (Line_dev_cost + (pheno_cost * pheno_rep)))
-
-# Number of plots if only predicting
-only_geno <- floor(budget / (Line_dev_cost + geno_cost))
-
-## Visualisng the parameter space
-pheno_plots <- c(0, only_pheno)
-geno_plots <- c(only_geno, 0)
-
-dat <- tibble::tibble(
-  cost = geno_plots, pheno_plots
-)
-
-basicPlot <- ggplot(
-  data = dat,
-  aes(
-    x = pheno_plots,
-    y = geno_plots
-  )
-) +
-  geom_point() +
-  geom_path()
-basicPlot
-
-#### Defining it for the entire parameter space ####
-
-SearchingGeneticGainParameters <- function(budget = budget,
-                                           # per breeding *cycle*
-                                           Line_dev_cost = Line_dev_cost,
-                                           # the cost of generating an inbred line, applied to either form of evaluation
-                                           ayn_number = ayn_number,
-                                           # number of AYN to be planted
-                                           pheno_cost = pheno_cost,
-                                           # cost to phenotype in field
-                                           pheno_rep = pheno_rep,
-                                           # number of phenotyping plots planted
-                                           pheno_variance = pheno_variance,
-                                           # Phenotypic variance to calculate i
-                                           pheno_cycle_length = pheno_cycle_length,
-                                           # number of years phenotypic selection cycle takes
-                                           h_pheno = h_pheno,
-                                           # Heritability of yield in pheno
-                                           geno_cost = geno_cost,
-                                           # cost to genotype
-                                           geno_cycle_length = geno_cycle_length,
-                                           # number of years prediction selection cycle takes
-                                           pred_accuracy = pred_accuracy,
-                                           # Prediction accuracy that is synonymous with genetic correlation
-                                           h_predTrait = h_predTrait
-                                           # assumes the genome in an inbred is 100% heritable and all additive
-) {
-  # Number of plots if only phenotyping
-  only_pheno <- floor(budget / (Line_dev_cost + (pheno_cost * pheno_rep)))
-  cost_per_pheno <- round(budget / only_pheno, digits = 2)
-  number_pheno <- as.integer(0:only_pheno)
-
-  # Number of plots if only predicting
-  only_geno <- floor(budget / (Line_dev_cost + geno_cost))
-  cost_per_geno <- round(budget / only_geno, digits = 2)
-  number_geno <- as.integer(0:only_geno)
-
-  # Creating dataframe of all combinations
-  df <- crossing(number_geno, number_pheno) %>%
-    mutate(
-      geno_spend = number_geno * cost_per_geno, # spent on genotyping
-      pheno_spend = number_pheno * cost_per_pheno, # spent on phenotyping
-      total_spend = geno_spend + pheno_spend, # total money spent
-      # proportion_geno = number_geno / (number_geno + number_pheno), # proportion
-      # proportion_pheno = number_pheno / (number_geno + number_pheno) # proportion
-      proportion_geno = geno_spend / total_spend, # proportion $ in predictin
-      proportion_pheno = pheno_spend / total_spend # proportion $ in phenotyping
-    ) %>%
-    filter(
-      total_spend <= budget
-    ) %>%
-    filter(
-      total_spend >= 0.5 * budget
-    ) %>%
-    mutate(
-      geno_ayn = round(ayn_number * proportion_geno), # AYN selected by prediction
-      pheno_ayn = round(ayn_number * proportion_pheno), # AYN selected by phenotyping
-      correlated_percentage = geno_ayn / number_geno,
-      correlated_intensity = correlated_percentage / sqrt(pheno_variance),
-      direct_percentage = pheno_ayn / number_pheno,
-      direct_intensity = direct_percentage / sqrt(pheno_variance),
-      correlated_response =
-        (correlated_intensity * pred_accuracy * sqrt(h_predTrait)) /
-          geno_cycle_length, # correlated response
-      direct_response =
-        (direct_intensity * sqrt(h_pheno)) /
-          pheno_cycle_length, # direct response
-      response_ratio = correlated_response / direct_response
-    ) %>%
-    filter(
-      !is.infinite(response_ratio)
-    ) %>%
-    filter(
-      !is.na(response_ratio)
-    ) %>%
-    filter(
-      response_ratio >= 0
-    )
-
-  gainPlot <- ggplot(
-    data = df,
-    aes(
-      x = number_pheno,
-      y = number_geno,
-      fill = response_ratio
-    )
-  ) +
-    geom_raster(interpolate = FALSE) +
-    scale_fill_gradient2(
-      low = "#762a83",
-      mid = "#f7f7f7",
-      high = "#1b7837",
-      midpoint = quantile(df$response_ratio, 0.75)
-    ) +
-    guides(fill = guide_colourbar(nbin = 100)) +
-    labs(
-      title = paste0(
-        "Parameter space for AYN number ", ayn_number
-      ),
-      subtitle = paste0(
-        "pheno cost = $", pheno_cost,
-        ", geno cost = $", geno_cost,
-        ", direct h2 = ", h_pheno,
-        ", correlated h2 = ", h_predTrait,
-        ", r = ", pred_accuracy,
-        ", geno time as proportion pheno time = ",
-        geno_cycle_length,
-        ", line development cost = $", Line_dev_cost
-      )
-    )
-
-  print(gainPlot)
-
-  return(df)
-}
-
-
-trial1 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.2, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.25, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial2 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.95, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial3 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 200, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 5, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.9, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial4 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 20, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial5 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 25, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial6 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 30, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial7 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.2, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial8 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 85, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.05, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial9 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 10, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 125, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.2, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-trial10 <- SearchingGeneticGainParameters(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 20, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 40, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_variance = 0.3, # phenotypic variance in the program
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  h_pheno = 0.1, # Heritability of yield in pheno
-  geno_cost = 5, # cost to genotype
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy = 0.85, # Prediction accuracy that is synonymous with genetic correlation
-  h_predTrait = 1
-)
-
-###############################################################################
-######################## New either or setup #################################
-###############################################################################
-
-ChangingVarGeneticGain <- function(
-                                   budget = budget, # per breeding *cycle*
-                                   Line_dev_cost = Line_dev_cost, # the cost of generating an inbred line, applied to either form of evaluation
-                                   ayn_number = ayn_number, # number of AYN to be planted
-                                   pheno_cost = pheno_cost, # cost to phenotype in field
-                                   pheno_rep = pheno_rep, # number of phenotyping plots planted
-                                   pheno_cycle_length = pheno_cycle_length, # number of years phenotypic selection cycle takes
-                                   geno_cost = geno_cost, # cost to genotype
-                                   h_pheno_min = h_pheno_min, # Heritability of yield in pheno (min)
-                                   h_pheno_max = h_pheno_max, # Heritability of yield in pheno (max)
-                                   h_pheno_by = h_pheno_by,
-                                   geno_cycle_length = geno_cycle_length, # number of years prediction selection cycle takes
-                                   pred_accuracy_min = pred_accuracy_min, # Prediction accuracy that is synonymous with genetic correlation
-                                   pred_accuracy_max = pred_accuracy_max, # Prediction accuracy that is synonymous with genetic correlation
-                                   pred_accuracy_by = pred_accuracy_by,
-                                   h_predTrait = h_predTrait) {
-
-  # Number of plots if only phenotyping
-  only_pheno <- floor(budget / (Line_dev_cost + (pheno_cost * pheno_rep)))
-  # Number of plots if only predicting
-  only_geno <- floor(budget / (Line_dev_cost + geno_cost))
-
-  tVar <- 1 ## total variance
-
-  prop_sel_pheno <- ayn_number / only_pheno
-  prop_sel_geno <- ayn_number / only_geno
-
-  h_pheno <- seq(
-    from = h_pheno_min, to = h_pheno_max,
-    by = h_pheno_by
-  )
-  pred_accuracy <- seq(
-    from = pred_accuracy_min, to = pred_accuracy_max,
-    by = pred_accuracy_by
-  )
-
-  df <- crossing(h_pheno, pred_accuracy) %>%
-    mutate(
-      direct_intensity = NA,
-      correlated_intensity = NA
-    )
-
-  ID <- nrow(df)
-
-  for (i in seq(1, ID, by = 1)) {
-    h_pheno <- as.numeric(df[i, 1])
-
-    # Only Pheno
-    gVar_pheno <- tVar * h_pheno # genetic variance
-    eVar_pheno <- tVar * (1 - h_pheno) # enviromental variance
-
-    geno_pheno <- rnorm(only_pheno, mean = 0, sd = sqrt(gVar_pheno)) # breeding value
-    env_pheno <- rnorm(only_pheno, mean = 0, sd = sqrt(eVar_pheno)) # enviromental deviation
-
-    pheno_pheno <- geno_pheno + env_pheno
-
-    # Only geno
-    gVar_geno <- tVar * h_pheno # genetic variance
-    eVar_geno <- tVar * (1 - h_pheno) # enviromental variance
-
-    geno_geno <- rnorm(only_geno, mean = 0, sd = sqrt(gVar_geno)) # breeding value
-    env_geno <- rnorm(only_geno, mean = 0, sd = sqrt(eVar_geno)) # enviromental deviation
-
-    pheno_geno <- geno_geno + env_geno
-
-    # direct selection
-    threshold_pheno <- sort(pheno_pheno, decreasing = TRUE)[ayn_number]
-
-    rtn_pheno <- rtnorm(
-      n = only_pheno,
-      mean = mean(pheno_pheno),
-      sd = sd(pheno_pheno),
-      lower = threshold_pheno
-    )
-    i_pheno <- mean(rtn_pheno)
-
-    df[i, "direct_intensity"] <- i_pheno
-
-    # Indirect selection
-    threshold_geno <- sort(pheno_geno, decreasing = TRUE)[ayn_number]
-
-    rtn_geno <- rtnorm(
-      n = only_geno,
-      mean = mean(pheno_geno),
-      sd = sd(pheno_geno),
-      lower = threshold_geno
-    )
-    i_geno <- mean(rtn_geno)
-
-    df[i, "correlated_intensity"] <- i_geno
-  }
-
-  df <- df %>%
-    mutate(
-      correlated_response =
-        (correlated_intensity * pred_accuracy * sqrt(h_predTrait)) /
-          geno_cycle_length, # correlated response
-      direct_response =
-        (direct_intensity * sqrt(h_pheno)) /
-          pheno_cycle_length, # direct response
-      response_ratio = correlated_response / direct_response
-    ) %>%
-    filter(
-      !is.infinite(response_ratio)
-    ) %>%
-    filter(
-      !is.na(response_ratio)
-    )
-
-  gainPlot <- ggplot(
-    data = df,
-    aes(
-      x = h_pheno,
-      y = pred_accuracy,
-      fill = response_ratio
-    )
-  ) +
-    geom_raster(interpolate = FALSE) +
-    scale_fill_gradient2(
-      low = "#1b7837",
-      mid = "#f7f7f7",
-      high = "#762a83",
-      midpoint = quantile(df$response_ratio, 0.90)
-    ) +
-    guides(fill = guide_colourbar(nbin = 200)) +
-    labs(
-      title = paste0(
-        "Parameter space for AYN number ", ayn_number
-      ),
-      subtitle = paste0(
-        "pheno cost = $", pheno_cost,
-        ", geno cost = $", geno_cost,
-        ", correlated h2 = ", h_predTrait,
-        ", geno time as proportion pheno time = ",
-        geno_cycle_length,
-        ", line development cost = $", Line_dev_cost
-      )
-    )
-
-
-  print(gainPlot)
-
-  print(paste0("Number of lines phenotyped: ", only_pheno))
-  print(paste0("Number of lines genotyped: ", only_geno))
-  print(paste0(
-    "Average proportion of lines selected when phenotyping: ",
-    round(prop_sel_pheno, 2)
-  ))
-  print(paste0(
-    "Average proportion of lines selected when genotyping: ",
-    round(prop_sel_geno, 2)
-  ))
-
-  return(df)
-}
-
-
-T1 <- ChangingVarGeneticGain(
-  budget = 100000, # per breeding *cycle*
-  Line_dev_cost = 100, # the cost of generating an inbred line, applied to either form of evaluation
-  ayn_number = 100, # number of AYN to be planted
-  pheno_cost = 100, # cost to phenotype in field
-  pheno_rep = 6, # number of phenotyping plots planted
-  pheno_cycle_length = 1, # number of years phenotypic selection cycle takes
-  geno_cost = 10, # cost to genotype
-  h_pheno_min = 0, # Heritability of yield in pheno (min)
-  h_pheno_max = 1, # Heritability of yield in pheno (max)
-  h_pheno_by = 0.01,
-  geno_cycle_length = 0.2, # number of years prediction selection cycle takes
-  pred_accuracy_min = 0, # Prediction accuracy that is synonymous with genetic correlation
-  pred_accuracy_max = 1, # Prediction accuracy that is synonymous with genetic correlation
-  pred_accuracy_by = 0.01,
-  h_predTrait = 1
-)
-
-
 ###############################################################################
 ###################### Response ratio by numbers ############################
 ###############################################################################
@@ -754,11 +261,9 @@ GainByResponse <- function(
         correlated_intensity = correlated_intensity,
         direct_intensity = direct_intensity,
         correlated_response =
-          (correlated_intensity * pred_accuracy * sqrt(h_predTrait)), #/
-           #geno_cycle_length, # correlated response
+          (correlated_intensity * pred_accuracy * sqrt(h_predTrait)), 
         direct_response =
-          (direct_intensity * sqrt(h_pheno)),# /
-            #pheno_cycle_length, # direct response
+          (direct_intensity * sqrt(h_pheno)),
         response_ratio = correlated_response / direct_response
       ) %>%
       filter(
@@ -790,58 +295,53 @@ try1 <- GainByResponse(
   geno_cost_end = 10, # cost to genotype
   geno_cost_by = 1, # cost to genotype
   h_pheno_min = 0, # Heritability of yield in pheno (min)
-  h_pheno_max = 0.2, # Heritability of yield in pheno (max)
-  h_pheno_by = 0.005,
+  h_pheno_max = 1, # Heritability of yield in pheno (max)
+  h_pheno_by = 0.1,
   #geno_cycle_length = 0.25, # number of years prediction selection cycle takes
   pred_accuracy_min = 0, # Prediction accuracy that is synonymous with genetic correlation
   pred_accuracy_max = 1, # Prediction accuracy that is synonymous with genetic correlation
-  pred_accuracy_by = 0.05,
-  h_predTrait = 1
+  pred_accuracy_by = 0.1,
+  h_predTrait = 0.95
 )
 
-try1_1 <- try1 %>%
-  drop_na() %>%
-  group_by(h_pheno, pred_accuracy) %>%
-  mutate(groupID = group_indices()) %>%
-  # filter(h_pheno > pred_accuracy) %>%
-  filter(
-    pred_accuracy > 0,
-    h_pheno > 0,
-    h_pheno < 0.02
-  ) # %>%
-# filter(groupID == 23 |
-#          groupID == 44 |
-#          groupID == 45 |
-#          groupID == 65 |
-#          groupID == 66)
-
-p <- ggplot(data = try1_1, aes(
+p <- try1 %>% 
+  drop_na(pred_accuracy) %>% 
+  ggplot(aes(
   x = ratio_numbers,
   y = response_ratio,
   group = factor(pred_accuracy),
   colour = factor(pred_accuracy)
 )) +
-   #geom_point(alpha = 0.1) +
-  geom_smooth() +
+  #geom_point(alpha = 0.05, fill = NA) +
+  geom_smooth(method = "lm") +
   geom_hline(yintercept = 1, linetype = 2) +
-  #scale_color_manual(
-    # values = c(
-    #   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
-    #   '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
-    #   '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
-    #   '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
-    # ),
-   # name = "Parameters"
+ # scale_color_manual(
+ # values = c(
+ #   '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
+ #   '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
+ #   '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
+ #   '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
+ # ),
+ # name = "Parameters"
  # ) +
   facet_wrap(~h_pheno, ncol = 5, scales = "free_y") +
+  coord_cartesian(ylim = c(0,8)) +
+  guides(colour = guide_legend(title = "Prediction Accuracy")) +
   labs(
-    title = "The response ratio when using exclusively prediction or phenotyping",
-    x = "phenotyped:predicted",
-    y = "correlated_response / direct_response"
-  ) #+
-theme(legend.position = "none")
+   # title = "The response ratio when using exclusively prediction or phenotyping",
+    x = "Phenotyped:Predicted",
+    y = "CR / R"
+  ) +
+theme(axis.text = element_text(size = rel(2)))
 
 p
+
+ggsave("~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure1.png",
+       width = 60,
+       height = 30,
+       units = "cm",
+       dpi = 320)
+
 
 groupings <- try1_1 %>%
   select(h_pheno, pred_accuracy, groupID) %>%

@@ -108,28 +108,28 @@ sessionInfo()
 #### Read in data ####
 
 accuracy17_ayn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy17_ayn.txt")
-group17_ayn_key<- fread("./BeocatScripts/Results/group17_ayn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy17_ayn.txt")
+group17_ayn_key<- fread("./Results/group17_ayn_key.txt")
 
 accuracy17_pyn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy17_pyn.txt")
-group17_pyn_key<- fread("./BeocatScripts/Results/group17_pyn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy17_pyn.txt")
+group17_pyn_key<- fread("./Results/group17_pyn_key.txt")
 
 accuracy18_ayn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy18_ayn.txt")
-group18_ayn_key<- fread("./BeocatScripts/Results/group18_ayn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy18_ayn.txt")
+group18_ayn_key<- fread("./Results/group18_ayn_key.txt")
 
 accuracy18_pyn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy18_pyn.txt")
-group18_pyn_key<- fread("./BeocatScripts/Results/group18_pyn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy18_pyn.txt")
+group18_pyn_key<- fread("./Results/group18_pyn_key.txt")
 
 accuracy19_ayn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy19_ayn.txt")
-group19_ayn_key<- fread("./BeocatScripts/Results/group19_ayn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy19_ayn.txt")
+group19_ayn_key<- fread("./Results/group19_ayn_key.txt")
 
 accuracy19_pyn<- 
-  fread("./BeocatScripts/Results/GenomicSelection_80_100_accuracy19_pyn.txt")
-group19_pyn_key<- fread("./BeocatScripts/Results/group19_pyn_key.txt")
+  fread("./Results/GenomicSelection_80_100_accuracy19_pyn.txt")
+group19_pyn_key<- fread("./Results/group19_pyn_key.txt")
 
 ## 17 
 accuracy17_ayn<- accuracy17_ayn %>% 

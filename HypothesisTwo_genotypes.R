@@ -104,19 +104,19 @@ set.seed(1964)
 sessionInfo()
 
 ######### Reading in files as a list of data frames
-# 
+#
 varietyNames <- fread("./PhenoDatabase/VarietyNames_Corrected.txt")
 varietyNames <- varietyNames %>%
   select(Variety)
-# 
+#
 write.table(varietyNames, "./GenoDatabase/MasterBreeding/varietiesSelected.txt",
   quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE
 )
 
 ## Key file
-keyfile<- fread("./GenoDatabase/MasterBreedingProgram.txt")
+keyfile <- fread("./GenoDatabase/MasterBreedingProgram.txt")
 
-keyfile<- keyfile %>% 
+keyfile <- keyfile %>%
   mutate(Variety = str_replace(Variety, "-M-", "M-")) %>%
   mutate(Variety = str_replace(Variety, "-K-", "K-")) %>%
   mutate(Variety = tolower(Variety)) %>%
@@ -124,34 +124,36 @@ keyfile<- keyfile %>%
   mutate(Variety = str_replace(Variety, "-", "_")) %>%
   mutate(Variety = str_replace(Variety, "wb_4458", "wb4458")) %>%
   mutate(Variety = str_replace(Variety, "symonument", "monument")) %>%
-  mutate(Variety = str_replace(Variety, "smith'sgold", "smithsgold")) %>% 
+  mutate(Variety = str_replace(Variety, "smith'sgold", "smithsgold")) %>%
   semi_join(varietyNames)
 
 write.table(keyfile, "./GenoDatabase/HypothesisTwo/KeyFile_BP.txt",
-            quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
+  quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE
+)
+
 #### Numeric output ####
 geno <- fread("./GenoDatabase/HypothesisTwo/numericImputed.txt")
-# 
+
 geno[1:10, 1:10]
-# 
+
 geno <- geno %>%
   rename(Variety = `<Marker>`) %>%
   mutate(Variety = tolower(Variety)) %>%
-  mutate(Variety = str_remove_all(Variety, " ")) %>% 
+  mutate(Variety = str_remove_all(Variety, " ")) %>%
   dplyr::arrange(Variety)
- 
+
 geno[1:10, 1:10]
- 
+
 genoSelected <- geno %>%
-  semi_join(varietyNames, by = "Variety") %>% 
+  semi_join(varietyNames, by = "Variety") %>%
   arrange(Variety)
 
-genoMissing <- varietyNames %>% 
+genoMissing <- varietyNames %>%
   anti_join(geno, by = "Variety")
 
-phenoMissing<- geno %>% 
+phenoMissing <- geno %>%
   anti_join(varietyNames, by = "Variety")
-  
+
 genoSelected[1:10, 1:10]
 
 rm(geno)
@@ -159,18 +161,18 @@ rm(geno)
 positions <- fread("./GenoDatabase/HypothesisTwo/HapMapFormat.hmp.txt",
   select = c(1:4)
 )
-# 
+
 positions <- positions %>%
   rename(snp = `rs#`) %>%
   select(-alleles)
-# 
+
 genoSelected <- genoSelected %>%
-  distinct(Variety, .keep_all = TRUE) %>% 
+  distinct(Variety, .keep_all = TRUE) %>%
   arrange(Variety)
-# 
+
 genoSelected <- t(genoSelected)
 genoSelected <- setDT(as.data.frame(genoSelected), keep.rownames = TRUE)
-genoSelected[1:10,1:10]
+genoSelected[1:10, 1:10]
 
 write.table(genoSelected, "./GenoDatabase/HypothesisTwo/SelectedGeno_Numeric2.txt",
   quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE
@@ -190,28 +192,30 @@ genoSelected <- genoSelected %>%
 rm(positions)
 
 genoSelected[1:10, 1:10]
-# 
-snpNames<- genoSelected[,1]
-# 
+
+snpNames <- genoSelected[, 1]
+
 write.table(genoSelected,
   "./GenoDatabase/SelectedGeno_Numeric.txt",
   quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE
 )
-# 
+
 genoSelected <- fread("./GenoDatabase/SelectedGeno_Numeric.txt")
-# 
+
 str(genoSelected)
-# 
-positions<- genoSelected[,c(1,2,3)]
-# 
+
+positions <- genoSelected[, c(1, 2, 3)]
+
 snpMatrix <- t(genoSelected[, c(-1, -2, -3)])
-# 
+
 pcaMethods::checkData(snpMatrix) # Check PCA assumptions
-#
-pcaAM <- pcaMethods::pca(snpMatrix, nPcs = 5) # SVD PCA
-# 
+
+pcaAM <- pcaMethods::pca(snpMatrix, nPcs = 15) # SVD PCA
+
+plot(pcaAM)
+
 sumPCA <- as.data.frame(summary(pcaAM))
-# #
+
 Scores <- as.data.frame(pcaMethods::scores(pcaAM))
 Scores <- setDT(Scores, keep.rownames = TRUE) %>%
   mutate(founders = if_else(
@@ -220,28 +224,49 @@ Scores <- setDT(Scores, keep.rownames = TRUE) %>%
       "bobdole", "gallagher", "monument", "wb_cedar"
     ), "yes", "no"
   ))
-# 
-p <- Scores %>%
+
+p1 <- Scores %>%
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point() +
+  gghighlight::gghighlight(founders == "yes",
+    label_key = rn,
+    label_params = c(size = 8)
+  ) +
+  theme(aspect.ratio = 1) +
+  labs(
+    x = paste0("PC1 = ", sumPCA["R2", "PC1"] * 100, "%"),
+    y = paste0("PC2 = ", sumPCA["R2", "PC2"] * 100, "%")
+  )
+p1
+p2 <- Scores %>%
   ggplot(aes(x = PC1, y = PC3)) +
   geom_point() +
-  gghighlight::gghighlight(founders == "yes", label_key = rn) +
+  gghighlight::gghighlight(founders == "yes",
+    label_key = rn,
+    label_params = c(size = 8)
+  ) +
   theme(aspect.ratio = 1) +
-  labs(x = paste0("PC1 = ", sumPCA["R2","PC1"] * 100, "%"),
-       y = paste0("PC3 = ", sumPCA["R2","PC3"] * 100, "%"))
-p
-ggsave("./Figures/PCA_2.png",
-       height = 25,
-       width = 25, units = "cm", dpi = 350
+  labs(
+    x = paste0("PC1 = ", sumPCA["R2", "PC1"] * 100, "%"),
+    y = paste0("PC3 = ", sumPCA["R2", "PC3"] * 100, "%")
+  )
+p2
+ggpubr::ggarrange(p1, p2,
+  nrow = 2
 )
-# 
+ggsave("~/OneDrive - Kansas State University/Dissertation_Calvert/BreedingProgram/Figures/Figure5.png",
+  height = 35,
+  width = 25, units = "cm", dpi = 320
+)
+#
 # snpMatrix[1:10,1:10]
 # colnames(snpMatrix)<- snpNames
 # snpMatrix[1:10,1:10]
-# # 
+# #
 # Linkage<- cor(snpMatrix)
-# 
+#
 # Linkage[1:5,1:5]
-# 
+#
 # ++++++++++++++++++++++++++++
 # flattenCorrMatrix
 # ++++++++++++++++++++++++++++
@@ -255,11 +280,11 @@ ggsave("./Figures/PCA_2.png",
 #     cor  =(cormat)[ut]
 #   )
 # }
-# 
+#
 # Linkage<- flattenCorrMatrix(cormat = Linkage)
-# 
+#
 # Linkage[1:5,]
-# 
+#
 # Linkage<- Linkage %>%
 #  inner_join(positions, by = c("row" = "snp")) %>%
 #   rename(chromRow = chrom,
@@ -268,26 +293,29 @@ ggsave("./Figures/PCA_2.png",
 #   rename(chromCol = chrom,
 #          posCol = pos) %>%
 #   filter(chromRow == chromCol)
-# 
+#
 # Linkage[1:5,]
-# 
+#
 # write.table(Linkage, file = "./Results/snpCorrelations.txt", quote = FALSE,
 #             sep = "\t", row.names = FALSE, col.names = TRUE)
 
-snpCor<- fread("./Results/snpCorrelations.txt")
+snpCor <- fread("./Results/snpCorrelations.txt")
 
-snpCor<- snpCor %>% 
-  mutate(distance = abs(posRow - posCol) / 1000000,
-         absoluteCor = abs(cor))
+snpCor <- snpCor %>%
+  mutate(
+    distance = abs(posRow - posCol) / 1000000,
+    absoluteCor = abs(cor)
+  )
 
 pdf("./Figures/absCorAbsDistance.pdf",
-    width = 15, 
-    height = 10)
+  width = 15,
+  height = 10
+)
 
-snpCor %>% 
+snpCor %>%
   ggplot(aes(x = distance, y = absoluteCor)) +
   geom_smooth() +
-  labs(title = "Linkage disequilibrium for KSU Breeding Program",
-       x = "Distance (Mb)")
-
-
+  labs(
+    title = "Linkage disequilibrium for KSU Breeding Program",
+    x = "Distance (Mb)"
+  )
